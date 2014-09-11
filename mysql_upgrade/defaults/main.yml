@@ -1,0 +1,4 @@
+---
+# defaults file for mysql_upgrade
+mysql_logdir: "/data/mysql_logs"
+

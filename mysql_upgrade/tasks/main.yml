@@ -1,0 +1,32 @@
+---
+# tasks file for mysql_upgrade
+- name: include os specific variables
+  include_vars: "{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml"
+
+- name: include RedHat specific tasks
+  include: RedHat.yml
+  when: ansible_os_family == 'RedHat'
+
+- name: Check for unsupported target operating system
+  fail:
+    msg: "The operating system of the target machine ({{ inventory_hostname }}) is not currently supported."
+  when: mysql_supported_os is not defined
+
+- name: ensure mysql service is enabled
+  service: name={{ mysql_service_name }} state=stopped enabled=yes
+  when: mysql_install.changed
+
+- name: configure the client password file
+  template: src=client_my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
+  when: mysql_root_password is defined or mysql_install.changed
+
+- name: start mysql service with skip-grant-tables
+  service: name={{ mysql_service_name }} state=started arguments='--skip-grant-tables'
+
+- name: run mysql_upgrade
+  shell: /usr/bin/mysql_upgrade -S {{ mysql_socket }} > {{ mysql_logdir }}/mysql_upgrade.log
+  ignore_errors: True
+
+- name: restart mysql service normally
+  service: name={{ mysql_service_name }} state=restarted
+

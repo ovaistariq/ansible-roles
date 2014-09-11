@@ -1,0 +1,29 @@
+---
+- name: >
+    RedHat | set_fact
+      mysql_supported_os: True
+  set_fact:
+    mysql_supported_os: True
+
+- name: RedHat | create directory to store rpm
+  file: path={{ rpm_download_dir}} state=directory
+
+- name: RedHat | download mysql rpms
+  get_url: url={{ mysql_download_url }}/{{ item }} dest={{ rpm_download_dir }}/{{ item }}
+  with_items: mysql_rpms
+
+- name: RedHat | stop mysql service
+  service: name=mysql state=stopped
+
+- name: RedHat | clean up installed rpms
+  shell: rpm -qa | grep ^MySQL | xargs rpm -e --nodeps
+
+- name: RedHat | clean old upgrade markers
+  command: rm -f /var/lib/mysql/RPM_UPGRADE_MARKER
+
+- name: RedHat | install mysql rpms
+  command: rpm -ivh {{ rpm_download_dir }}/*.rpm 
+  register: mysql_install
+
+- name: RedHat | install additional packages
+  yum: name=MySQL-python state=installed
