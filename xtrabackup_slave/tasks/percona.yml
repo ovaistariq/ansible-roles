@@ -1,0 +1,14 @@
+--- 
+
+# Percona repository specific tasks
+- name: install percona repository
+  shell: rpm -ivh --force http://www.percona.com/downloads/percona-release/percona-release-0.0-1.x86_64.rpm
+
+# Percona XtraBackup specific tasks
+- name: install percona xtrabackup
+  yum: name={{ item }} state=installed
+  with_items:
+    - percona-xtrabackup
+    - qpress
+    - nc
+  register: pxb_install

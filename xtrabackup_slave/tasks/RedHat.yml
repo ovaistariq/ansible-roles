@@ -1,0 +1,7 @@
+---
+- name: >
+    RedHat | set_fact
+      mysql_supported_os: True
+  set_fact:
+    mysql_supported_os: True
+

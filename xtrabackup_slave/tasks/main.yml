@@ -1,0 +1,24 @@
+---
+# tasks file for xtrabackup_slave
+- name: include os specific variables
+  include_vars: "{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml"
+
+- name: include RedHat specific tasks
+  include: RedHat.yml
+  when: ansible_os_family == 'RedHat'
+
+- name: Check for unsupported target operating system
+  fail:
+    msg: "The operating system of the target machine ({{ inventory_hostname }}) is not currently supported."
+  when: mysql_supported_os is not defined
+
+- name: configure the client password file
+  template: src=client_my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
+  when: mysql_root_password is defined
+
+- name: include percona specific tasks
+  include: percona.yml
+
+- name: xtrabackup backup and restore
+  include: backup_and_restore.yml
+  when: pxb_install|success
