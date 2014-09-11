@@ -1,0 +1,12 @@
+--- 
+
+# Percona toolkit specific tasks
+- name: install percona repository
+  shell: rpm -ivh --force http://www.percona.com/downloads/percona-release/percona-release-0.0-1.x86_64.rpm
+
+- name: install percona toolkit
+  yum: name=percona-toolkit state=installed
+
+- name: configure .pt-table-checksum.conf for the root user
+  template: src=pt-table-checksum.conf dest=/root/.pt-table-checksum.conf owner=root group=root mode=0600
+

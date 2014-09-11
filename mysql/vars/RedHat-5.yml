@@ -1,0 +1,15 @@
+---
+mysql_service_name: "mysql"
+
+mysql_download_url: "http://dev.mysql.com/get/Downloads/MySQL-{{ mysql_major_version }}"
+
+# example full URL of RPMs is:
+# http://dev.mysql.com/get/Downloads/MySQL-5.6/MySQL-shared-compat-5.6.16-1.rhel5.x86_64.rpm
+mysql_rpms:
+  - MySQL-shared-compat-{{ mysql_full_version }}.rhel5.x86_64.rpm
+  - MySQL-devel-{{ mysql_full_version }}.rhel5.x86_64.rpm
+  - MySQL-client-{{ mysql_full_version }}.rhel5.x86_64.rpm
+  - MySQL-server-{{ mysql_full_version }}.rhel5.x86_64.rpm
+  - MySQL-shared-{{ mysql_full_version }}.rhel5.x86_64.rpm
+
+rpm_download_dir: "/usr/local/src/mysql-{{ mysql_full_version }}"

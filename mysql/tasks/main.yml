@@ -1,0 +1,34 @@
+---
+# tasks file for mysql
+- name: set mysql_server_id based on ip address
+  set_fact: mysql_server_id={{ ansible_eth0.ipv4.address|regex_replace("^.{0,3}|[.]") }}
+  when: mysql_server_id is not defined
+
+- name: include os specific variables
+  include_vars: "{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml"
+
+- name: include RedHat specific tasks
+  include: RedHat.yml
+  when: ansible_os_family == 'RedHat'
+
+- name: Check for unsupported target operating system
+  fail:
+    msg: "The operating system of the target machine ({{ inventory_hostname }}) is not currently supported."
+  when: mysql_supported_os is not defined
+
+- name: ensure mysql service is enabled
+  service: name={{ mysql_service_name }} state=started enabled=yes
+  when: mysql_install.changed
+
+- name: configure the client password file
+  template: src=client_my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
+  when: mysql_root_password is defined or mysql_install.changed
+
+- name: configure the logrotate script
+  template: src=logrotate_mysql.j2 dest=/etc/logrotate.d/mysql owner=root group=root mode=0644
+  when: mysql_install.changed
+
+- name: include percona specific tasks
+  include: percona.yml
+  when: mysql_install.changed
+

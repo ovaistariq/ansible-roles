@@ -1,0 +1,87 @@
+
+[mysql]
+
+# CLIENT #
+port                           = {{ mysql_port }}
+socket                         = {{ mysql_socket }}
+loose-default-character-set    = utf8
+
+[mysqld]
+
+# GENERAL #
+user                           = {{ mysql_user }}
+default-storage-engine         = InnoDB
+socket                         = {{ mysql_socket }}
+port                           = {{ mysql_port }}
+pid-file                       = /data/mysql_data/mysql.pid
+tmpdir                         = {{ mysql_tmpdir }}
+
+# CHARACTER SET #
+character-set-server           = utf8
+collation-server               = utf8_general_ci
+
+# MyISAM #
+key-buffer-size                = 32M
+myisam-recover                 = FORCE,BACKUP
+
+# SAFETY #
+max-allowed-packet             = 16M
+max-connect-errors             = 1000000
+sysdate-is-now                 = 1
+innodb                         = FORCE
+innodb-strict-mode             = 1
+lower-case-table-names         = 1
+log-bin-trust-function-creators=1
+
+# DATA STORAGE #
+datadir                        = {{ mysql_datadir }}
+
+# BINARY LOGGING #
+log-bin                        = {{ mysql_log_bin }}
+binlog-format                  = MIXED
+expire-logs-days               = {{ mysql_expire_logs_days }}
+sync-binlog                    = 0
+
+# REPLICATION #
+server-id                      = {{ mysql_server_id }}
+read-only                      = 1
+skip-slave-start               = 1
+log-slave-updates              = 1
+relay-log                      = {{ mysql_relay_log }}
+relay-log-index                = {{ mysql_relay_log_index }}
+slave-net-timeout              = 60
+
+# CACHES AND LIMITS #
+tmp-table-size                 = 256M
+max-heap-table-size            = 256M
+query-cache-type               = 0
+query-cache-size               = 0
+max-connections                = 7000
+thread-cache-size              = 100
+open-files-limit               = 65535
+table-definition-cache         = 4096
+table-open-cache               = 16000
+
+{% if mysql_major_version and mysql_major_version == "5.6" %}
+table-open-cache-instances     = 16     
+{% endif %}
+
+# INNODB #
+innodb-flush-method            = O_DIRECT
+innodb-log-files-in-group      = 2
+innodb-log-file-size           = 2G
+innodb-flush-log-at-trx-commit = 2
+innodb-file-per-table          = 1
+innodb-buffer-pool-size        = {{ ((memory_mb|float * 0.84) / 1024)|round|int }}G
+
+{% if mysql_major_version and mysql_major_version == "5.6" %}
+innodb-buffer-pool-dump-at-shutdown=1
+innodb-buffer-pool-load-at-startup=1
+{% endif %}
+
+# LOGGING #
+log-error                      = {{ mysql_error_log }}
+long-query-time                = 0.5
+slow-query-log                 = 1
+slow-query-log-file            = {{ mysql_slow_log }}
+
