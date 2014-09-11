@@ -17,7 +17,7 @@ These variables have to be defined in the playbook, since there are no defaults 
 * `mysql_socket` The unix domain socket that MySQL will use
 * `mysql_root_password` The MySQL root password
 * `checksum_user` The MySQL user used by pt-table-checksum. This user must already be setup
-* `checksum_password` The MySQL user used by pt-table-checksum. This user must already be setup
+* `checksum_password` The password of the MySQL user used by pt-table-checksum
 
 ## Standard
 * `mysql_port` Defaults to 3306
