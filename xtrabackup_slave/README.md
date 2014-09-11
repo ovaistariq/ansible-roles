@@ -1,7 +1,7 @@
 mysql
 ========
 This is a role to backup using Percona XtraBackup a MySQL server, stream it to a new machine and prepare it so that it is ready to be used to setup a new slave. This role does not setup replication. 
-Rather, it must be used together with xtrabackup_replication role to complete the replication setup of the slave.
+Rather, it must be used together with `xtrabackup_replication` role to complete the replication setup of the slave.
 
 Requirements
 ------------
