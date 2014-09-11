@@ -46,11 +46,11 @@ Including an example of how to use this role with variables passed in as paramet
     - hosts: servers
       roles:
          - { role: mysql, mysql_major_version: "5.6", 
-                          mysql_full_version: "5.6.19-1", 
-                          mysql_socket: "/data/mysql_data/mysql.sock", 
-                          mysql_root_password: "changeme",
-                          checksum_user: "some_username",
-                          checksum_password: "some_password" }
+                mysql_full_version: "5.6.19-1", 
+                mysql_socket: "/data/mysql_data/mysql.sock", 
+                mysql_root_password: "changeme",
+                checksum_user: "some_username",
+                checksum_password: "some_password" }
 
 Author Information
 ------------------
