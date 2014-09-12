@@ -13,6 +13,7 @@ Role Variables
 
 ## Mandatory
 These variables have to be defined in the playbook, since there are no defaults defined for them
+* `mysql_socket` The unix domain socket that MySQL will use
 * `mysql_root_password` The MySQL root password
 * `mysql_master_host` The hostname of the MySQL server that will be backed up to clone a new slave
 
