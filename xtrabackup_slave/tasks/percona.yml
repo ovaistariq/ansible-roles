@@ -12,3 +12,12 @@
     - qpress
     - nc
   register: pxb_install
+
+- name: install percona xtrabackup on master
+  yum: name={{ item }} state=installed
+  with_items:
+    - percona-xtrabackup
+    - qpress
+    - nc
+  delegate_to: "{{ mysql_master_host }}"
+  register: pxb_install_master

@@ -16,9 +16,14 @@
   template: src=client_my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
   when: mysql_root_password is defined
 
+- name: configure the client password file on master
+  template: src=client_my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
+  delegate_to: "{{ mysql_master_host }}"
+  when: mysql_root_password is defined
+
 - name: include percona specific tasks
   include: percona.yml
 
 - name: xtrabackup backup and restore
   include: backup_and_restore.yml
-  when: pxb_install|success
+  when: pxb_install|success and pxb_install_master|success
