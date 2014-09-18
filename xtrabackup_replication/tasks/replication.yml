@@ -11,13 +11,25 @@
   fail: msg="mysql_master_host has not been defined."
   when: mysql_master_host is not defined
 
-- name: get master log filename for slave config
+- name: get master log filename from xtrabackup_binlog_info
   shell: cut -f 1 {{ mysql_datadir }}/xtrabackup_binlog_info
   register: xtrabackup_binlog_file
+  when: backup_source_host == mysql_master_host
 
-- name: get master log position for slave config
+- name: get master log position from xtrabackup_binlog_info
   shell: cut -f 2 {{ mysql_datadir }}/xtrabackup_binlog_info
   register: xtrabackup_binlog_pos
+  when: backup_source_host == mysql_master_host
+
+- name: get master log filename from xtrabackup_slave_info
+  shell: cut -d "'" -f 2 {{ mysql_datadir }}/xtrabackup_slave_info
+  register: xtrabackup_binlog_file
+  when: backup_source_host != mysql_master_host
+
+- name: get master log position from xtrabackup_slave_info
+  shell: cut -d "=" -f 3 {{ mysql_datadir }}/xtrabackup_slave_info
+  register: xtrabackup_binlog_pos
+  when: backup_source_host != mysql_master_host
 
 - name: ensure mysql service is running
   service: name={{ mysql_service_name }} state=started

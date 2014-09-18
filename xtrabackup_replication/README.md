@@ -15,7 +15,8 @@ Role Variables
 These variables have to be defined in the playbook, since there are no defaults defined for them
 * `mysql_socket` The unix domain socket that MySQL will use
 * `mysql_root_password` The MySQL root password
-* `mysql_master_host` The hostname of the MySQL server that will be backed up to clone a new slave
+* `backup_source_host` The hostname of the MySQL server that was backed up to clone the new slave
+* `mysql_master_host` The hostname of the MySQL server that will be the master of the new slave, if the backup was taken from the slave
 * `mysql_replication_user` The MySQL user used by the replication threads
 * `mysql_replication_password` The password of the MySQL user used by replication threads
 
@@ -36,6 +37,7 @@ Including an example of how to use this role with variables passed in as paramet
       roles:
          - { role: xtrabackup_replication, mysql_socket: "/data/mysql_data/mysql.sock", 
                 mysql_root_password: "changeme",
+                backup_source_host: "hostname",
                 mysql_master_host: "hostname",
                 mysql_replication_user: "some_username",
                 mysql_replication_password: "some_password" }
