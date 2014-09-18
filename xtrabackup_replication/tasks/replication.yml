@@ -13,22 +13,22 @@
 
 - name: get master log filename from xtrabackup_binlog_info
   shell: cut -f 1 {{ mysql_datadir }}/xtrabackup_binlog_info
-  register: xtrabackup_binlog_file
+  register: xtrabackup_binlog_info_file
   when: backup_source_host == mysql_master_host
 
 - name: get master log position from xtrabackup_binlog_info
   shell: cut -f 2 {{ mysql_datadir }}/xtrabackup_binlog_info
-  register: xtrabackup_binlog_pos
+  register: xtrabackup_binlog_info_pos
   when: backup_source_host == mysql_master_host
 
 - name: get master log filename from xtrabackup_slave_info
   shell: cut -d "'" -f 2 {{ mysql_datadir }}/xtrabackup_slave_info
-  register: xtrabackup_binlog_file
+  register: xtrabackup_slave_info_file
   when: backup_source_host != mysql_master_host
 
 - name: get master log position from xtrabackup_slave_info
   shell: cut -d "=" -f 3 {{ mysql_datadir }}/xtrabackup_slave_info
-  register: xtrabackup_binlog_pos
+  register: xtrabackup_slave_info_pos
   when: backup_source_host != mysql_master_host
 
 - name: ensure mysql service is running
@@ -41,7 +41,7 @@
     login_unix_socket: "{{ mysql_socket }}"
     mode: stopslave 
 
-- name: configure slave to replicate with master
+- name: configure slave to replicate with the master using xtrabackup_binlog_info
   mysql_replication:
     login_user: root
     login_password: "{{ mysql_root_password }}"
@@ -50,9 +50,23 @@
     master_host: "{{ mysql_master_host }}"
     master_user: "{{ mysql_replication_user }}"
     master_password: "{{ mysql_replication_password }}"
-    master_log_file: "{{ xtrabackup_binlog_file.stdout }}"
-    master_log_pos: "{{ xtrabackup_binlog_pos.stdout }}"
-  when: xtrabackup_binlog_file.stdout != "" and xtrabackup_binlog_pos.stdout != "" and mysql_master_host is defined
+    master_log_file: "{{ xtrabackup_binlog_info_file.stdout }}"
+    master_log_pos: "{{ xtrabackup_binlog_info_pos.stdout }}"
+  when: xtrabackup_binlog_info_file.stdout != "" and xtrabackup_binlog_info_pos.stdout != "" and mysql_master_host is defined and backup_source_host == mysql_master_host
+  ignore_errors: True
+
+- name: configure slave to replicate with the master using xtrabackup_slave_info
+  mysql_replication:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ mysql_socket }}"
+    mode: changemaster
+    master_host: "{{ mysql_master_host }}"
+    master_user: "{{ mysql_replication_user }}"
+    master_password: "{{ mysql_replication_password }}"
+    master_log_file: "{{ xtrabackup_slave_info_file.stdout }}"
+    master_log_pos: "{{ xtrabackup_slave_info_pos.stdout }}"
+  when: xtrabackup_slave_info_file.stdout != "" and xtrabackup_slave_info_pos.stdout != "" and mysql_master_host is defined and backup_source_host != mysql_master_host
   ignore_errors: True
 
 - name: start replication
