@@ -1,7 +1,7 @@
 ---
-- name: backup_and_restore | check for the mysql_master_host variable
-  fail: msg="mysql_master_host has not been defined."
-  when: mysql_master_host is not defined
+- name: backup_and_restore | check for the backup_source_host variable
+  fail: msg="backup_source_host has not been defined."
+  when: backup_source_host is not defined
 
 - name: backup_and_restore | stop mysql service
   service: name=mysql state=stopped
@@ -17,7 +17,7 @@
     - "{{ mysql_tmpdir }}"
 
 - name: backup_and_restore | stream backup to slave and prepare it
-  local_action: script clone_slave.sh -m {{ mysql_master_host }} -s {{ hostvars[inventory_hostname]['ansible_hostname'] }} -d {{ mysql_datadir }}
+  local_action: script clone_slave.sh -m {{ backup_source_host }} -s {{ hostvars[inventory_hostname]['ansible_hostname'] }} -d {{ mysql_datadir }}
 
 - name: backup_and_restore | setup datadir permissions
   file: path={{ mysql_datadir }} state=directory owner=mysql group=mysql recurse=yes

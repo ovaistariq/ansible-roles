@@ -15,7 +15,7 @@ Role Variables
 These variables have to be defined in the playbook, since there are no defaults defined for them
 * `mysql_socket` The unix domain socket that MySQL will use
 * `mysql_root_password` The MySQL root password
-* `mysql_master_host` The hostname of the MySQL server that will be backed up to clone a new slave
+* `backup_source_host` The hostname of the MySQL server that will be backed up to clone a new slave
 
 ## Standard
 * `mysql_datadir` Defaults to /data/mysql_data
@@ -25,8 +25,8 @@ These variables have to be defined in the playbook, since there are no defaults 
 Dependencies
 ------------
 
-* The role depends on the {{ mysql_master_host }} being accessible via ssh from the host that will use the role.
-* The role also depends on port 7777 being open between {{ mysql_master_host }} and the host which is supposed to receive the backup.
+* The role depends on the {{ backup_source_host }} being accessible via ssh from the host that will use the role.
+* The role also depends on port 7777 being open between {{ backup_source_host }} and the host which is supposed to receive the backup.
 
 Example Playbook
 -------------------------
@@ -35,7 +35,7 @@ Including an example of how to use this role with variables passed in as paramet
 
     - hosts: servers
       roles:
-         - { role: xtrabackup_slave, mysql_root_password: "changeme", mysql_master_host: "hostname" }
+         - { role: xtrabackup_slave, mysql_root_password: "changeme", backup_source_host: "hostname" }
 
 Author Information
 ------------------

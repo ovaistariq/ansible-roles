@@ -19,5 +19,5 @@
     - percona-xtrabackup
     - qpress
     - nc
-  delegate_to: "{{ mysql_master_host }}"
+  delegate_to: "{{ backup_source_host }}"
   register: pxb_install_master

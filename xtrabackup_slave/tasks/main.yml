@@ -18,7 +18,7 @@
 
 - name: configure the client password file on master
   template: src=client_my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
-  delegate_to: "{{ mysql_master_host }}"
+  delegate_to: "{{ backup_source_host }}"
   when: mysql_root_password is defined
 
 - name: include percona specific tasks
