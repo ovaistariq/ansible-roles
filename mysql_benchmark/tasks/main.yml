@@ -1,0 +1,38 @@
+---
+# tasks file for mysql_benchmark
+- name: include os specific variables
+  include_vars: "{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml"
+
+- name: include RedHat specific tasks
+  include: RedHat.yml
+  when: ansible_os_family == 'RedHat'
+
+- name: Check for unsupported target operating system
+  fail:
+    msg: "The operating system of the target machine ({{ inventory_hostname }}) is not currently supported."
+  when: mysql_supported_os is not defined
+
+- name: install percona repository
+  shell: rpm -ivh --force http://www.percona.com/downloads/percona-release/percona-release-0.0-1.x86_64.rpm
+
+- name: install required tools on target host
+  yum: name={{ item }} state=installed
+  with_items:
+    - percona-toolkit
+    - nc
+    - tcpdump
+  register: tools_install
+
+- name: install required tools on master host
+  yum: name={{ item }} state=installed
+  with_items:
+    - nc
+    - tcpdump
+  delegate_to: "{{ mysql_master_host }}"
+  register: tools_install_master
+
+- name: install pt-log-player
+  copy: src=pt-log-player dest=/usr/bin/pt-log-player owner=root group=root mode=0755
+
+- name: run the benchmark
+  local_action: script mysql_workload_benchmark.sh --master-host {{ mysql_master_host }} --slave-host {{ mysql_slave_host }} --target-host {{ hostvars[inventory_hostname]['ansible_hostname'] }} --mysql-user {{ mysql_user }} --mysql-password {{ mysql_password }} --tcpdump-seconds {{ benchmark_seconds }} --target-tmpdir {{ target_tmpdir }} --output-dir {{ output_dir }}
