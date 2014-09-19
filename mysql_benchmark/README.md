@@ -1,5 +1,5 @@
-mysql
-========
+mysql_benchmark
+===============
 This is a role to benchmark a MySQL server using production workload. The production workload is captured on the master and replayed on a production slave as a baseline. 
 The baseline is then compared to how replaying the same workload works on the target server that is being benchmarked.
 

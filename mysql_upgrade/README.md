@@ -1,5 +1,5 @@
-mysql
-========
+mysql_upgrade
+=============
 This is a role to upgrade a MySQL instance.
 
 Requirements

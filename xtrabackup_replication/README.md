@@ -1,5 +1,5 @@
-mysql
-========
+xtrabackup_replication
+======================
 This is a role to configure replication on a MySQL server that has been prepared using Percona XtraBackup. 
 This role depends on `xtrabackup_slave` role to prepare the MySQL server.
 
