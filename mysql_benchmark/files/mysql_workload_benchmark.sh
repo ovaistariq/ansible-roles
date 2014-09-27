@@ -13,12 +13,11 @@ slave_host=
 # The host that we want to benchmark to guage performance
 target_host=
 
-# The amount of seconds up to which tcpdump must be run to capture
-# the queries
+# The amount of seconds up to which tcpdump must be run to capture the queries
 tcpdump_time_limit_sec=300
 
-# The directory on the target host where benchmark data will
-# be temporarily stored
+# The directory on the target host where benchmark data will be temporarily 
+# stored
 tmp_dir="/tmp"
 
 # The directory where the benchmark report will be stored
@@ -33,6 +32,11 @@ test_only=
 # These should be read-only MySQL users
 mysql_username=
 mysql_password=
+
+# Should the benchmark run be interactive. If its interactive, then each 
+# important step will be preceeded with a prompt. By default the benchmark
+# run is non-interactive
+interactive=0
 
 mysql_interface=eth0
 mysql_port=3306
@@ -71,6 +75,8 @@ function show_error_n_exit() {
 }
 
 function cleanup() {
+    vlog "Doing cleanup before exiting"
+
     # Cleanup any outstanding netcat sockets
     cleanup_nc ${nc_port} ${target_host}
 
@@ -209,7 +215,22 @@ function get_tcpdump_from_master() {
     local tcpdump_args="-i ${mysql_interface} -s 65535 -x -n -q -tttt 'port ${mysql_port} and tcp[1] & 7 == 2 and tcp[3] & 7 == 2'"
     local tcpdump_file="${master_tmp_dir}/${tcpdump_filename}"
 
-    vlog "Capturing production queries via tcpdump on the master ${master_host}"
+    vlog "Starting to capture production queries via tcpdump on the master ${master_host}"
+
+    # If the user wishes to cancel the benchmark run then we exit from here
+    if [[ "${interactive}" == "1" ]]
+    then
+        proceed_with_benchmark=
+        printf 1>&2 "\n\tWould you like to proceed: [y/n] "
+        read proceed_with_benchmark
+        echo
+
+        if [[ "${proceed_with_benchmark}" != "y" ]]
+        then
+            cleanup
+            exit 22
+        fi
+    fi
 
     # Cleanup old sockets
     vlog "Cleaning up old netcat sockets"
@@ -325,7 +346,23 @@ function run_benchmark() {
     done
 
     # Run the benchmark against the slave host
-    vlog "Running the benchmark on the slave host ${slave_host} with a concurrency of ${mysql_thd_conc}"
+    vlog "Starting to run the benchmark on the slave host ${slave_host} with a concurrency of ${mysql_thd_conc}"
+
+    # If the user wishes to cancel the benchmark run then we exit from here
+    if [[ "${interactive}" == "1" ]]
+    then
+        proceed_with_benchmark=
+        printf 1>&2 "\n\tWould you like to proceed: [y/n] "
+        read proceed_with_benchmark
+        echo
+        
+        if [[ "${proceed_with_benchmark}" != "y" ]]
+        then
+            cleanup
+            exit 22
+        fi
+    fi
+
     for db in ${active_db_list}
     do
         echo "Benchmarking the schema ${db}"
@@ -335,7 +372,23 @@ function run_benchmark() {
     done
 
     # Run the benchmark against the target host
-    vlog "Running the benchmark on the target host ${target_host} with a concurrency of ${mysql_thd_conc}"
+    vlog "Starting to run the benchmark on the target host ${target_host} with a concurrency of ${mysql_thd_conc}"
+
+    # If the user wishes to cancel the benchmark run then we exit from here
+    if [[ "${interactive}" == "1" ]]
+    then
+        proceed_with_benchmark=
+        printf 1>&2 "\n\tWould you like to proceed: [y/n] "
+        read proceed_with_benchmark
+        echo
+
+        if [[ "${proceed_with_benchmark}" != "y" ]]
+        then
+            cleanup
+            exit 22
+        fi
+    fi
+
     for db in ${active_db_list}
     do
         echo "Benchmarking the schema ${db}"
@@ -391,6 +444,8 @@ Capture tcpdump output from MASTER_HOST and replay it on SLAVE_HOST and TARGET_H
 Options:
 
     --help                                      display this help and exit
+    --interactive                               should the benchmark be run interactively,
+                                                this is disabled by default
     --master-host MASTER_HOST                   the master host actively executing production
                                                 traffic that will be used to capture
                                                 queries via tcpdump
@@ -416,29 +471,8 @@ function show_help_and_exit() {
     exit 22 # Invalid parameters
 }
 
-# Command line argument processing
-#OPT_ARGS=":m:s:d:l:t"
-#while getopts "$OPT_ARGS" opt
-#do
-#    case ${opt} in
-#        m) master_host=$OPTARG;;
-#        s) slave_host=$OPTARG;;
-#        d) target_host=$OPTARG;;
-#        l) tcpdump_time_limit_sec=$OPTARG;;
-#        t) test_only=true;;
-#        \?)
-#            show_help >&2
-#            exit 1
-#            ;;
-#        :)
-#            show_help >&2
-#            exit 2
-#            ;;
-#    esac
-#done
-
 # Command line processing
-OPTS=$(getopt -o hm:s:T:l:t:o:u:p: --long help,master-host:,slave-host:,target-host:,tcpdump-seconds:,target-tmpdir:,output-dir:,mysql-user:,mysql-password: -n 'mysql_workload_benchmark.sh' -- "$@")
+OPTS=$(getopt -o him:s:T:l:t:o:u:p: --long help,interactive,master-host:,slave-host:,target-host:,tcpdump-seconds:,target-tmpdir:,output-dir:,mysql-user:,mysql-password: -n 'mysql_workload_benchmark.sh' -- "$@")
 [ $? != 0 ] && show_help_and_exit
 
 eval set -- "$OPTS"
@@ -475,6 +509,9 @@ while true; do
                                 ;;
     -p | --mysql-password )     mysql_password="$2";
                                 shift; shift
+                                ;;
+    -i | --interactive )        interactive=1
+                                shift;
                                 ;;
     -h | --help )
                                 show_help >&2
@@ -553,6 +590,7 @@ setup_directories
 
 # Capture and transfer tcpdump from source to target host
 get_tcpdump_from_master
+    
 
 # Parse the source host tcpdump and generate slow log from it
 # This will be used by percona-playback
