@@ -38,6 +38,12 @@ mysql_password=
 # run is non-interactive
 interactive=0
 
+# Should the benchmark be run with cold InnoDB Buffer Pool cache. When this
+# is enabled then the Buffer Pool is not warmed up before replaying the
+# workload. This can be important in cases where you want to test MySQL
+# performance with cold caches
+benchmark_cold_run=0
+
 mysql_interface=eth0
 mysql_port=3306
 nc_port=7778
@@ -221,7 +227,7 @@ function get_tcpdump_from_master() {
     if [[ "${interactive}" == "1" ]]
     then
         proceed_with_benchmark=
-        printf 1>&2 "\n\tWould you like to proceed: [y/n] "
+        printf 1>&2 "\n\tWould you like to proceed [y/n]: "
         read proceed_with_benchmark
         echo
 
@@ -333,17 +339,20 @@ function run_benchmark() {
     echo "${active_db_list}"
 
     # Warm up the buffer pool on the slave and target hosts
-    for host in ${slave_host} ${target_host}
-    do
-        vlog "Warming up the buffer pool on the host ${host}"
-        for db in ${active_db_list}
+    if [[ "${benchmark_cold_run}" == "0" ]]
+    then
+        for host in ${slave_host} ${target_host}
         do
-            echo "Warming up schema ${db}"
-            pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --only-select --threads ${mysql_thd_conc} --no-results --iterations=3 h=${host},u=${mysql_username},p=${mysql_password},D=${db}"
+            vlog "Warming up the buffer pool on the host ${host}"
+            for db in ${active_db_list}
+            do
+                echo "Warming up schema ${db}"
+                pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --only-select --threads ${mysql_thd_conc} --no-results --iterations=3 h=${host},u=${mysql_username},p=${mysql_password},D=${db}"
 
-            ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
+                ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
+            done
         done
-    done
+    fi
 
     # Run the benchmark against the slave host
     vlog "Starting to run the benchmark on the slave host ${slave_host} with a concurrency of ${mysql_thd_conc}"
@@ -352,7 +361,7 @@ function run_benchmark() {
     if [[ "${interactive}" == "1" ]]
     then
         proceed_with_benchmark=
-        printf 1>&2 "\n\tWould you like to proceed: [y/n] "
+        printf 1>&2 "\n\tWould you like to proceed [y/n]: "
         read proceed_with_benchmark
         echo
         
@@ -378,7 +387,7 @@ function run_benchmark() {
     if [[ "${interactive}" == "1" ]]
     then
         proceed_with_benchmark=
-        printf 1>&2 "\n\tWould you like to proceed: [y/n] "
+        printf 1>&2 "\n\tWould you like to proceed [y/n]: "
         read proceed_with_benchmark
         echo
 
@@ -463,6 +472,8 @@ Options:
                                                 replay the benchmark queries on SLAVE_HOST and
                                                 TARGET_HOST
     --mysql-password MYSQL_PASSWORD             the password for the MySQL user
+    --cold-run                                  run the benchmark with cold InnoDB Buffer Pool
+                                                cache, this is disabled by default
 EOF
 }
 
@@ -472,7 +483,7 @@ function show_help_and_exit() {
 }
 
 # Command line processing
-OPTS=$(getopt -o him:s:T:l:t:o:u:p: --long help,interactive,master-host:,slave-host:,target-host:,tcpdump-seconds:,target-tmpdir:,output-dir:,mysql-user:,mysql-password: -n 'mysql_workload_benchmark.sh' -- "$@")
+OPTS=$(getopt -o hicm:s:T:l:t:o:u:p: --long help,interactive,cold-run,master-host:,slave-host:,target-host:,tcpdump-seconds:,target-tmpdir:,output-dir:,mysql-user:,mysql-password: -n 'mysql_workload_benchmark.sh' -- "$@")
 [ $? != 0 ] && show_help_and_exit
 
 eval set -- "$OPTS"
@@ -511,6 +522,9 @@ while true; do
                                 shift; shift
                                 ;;
     -i | --interactive )        interactive=1
+                                shift;
+                                ;;
+    -c | --cold-run )           benchmark_cold_run=1
                                 shift;
                                 ;;
     -h | --help )
