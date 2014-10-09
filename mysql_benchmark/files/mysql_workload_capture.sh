@@ -58,9 +58,6 @@ function cleanup() {
 
     # Cleanup any outstanding netcat sockets
     cleanup_nc ${nc_port} ${target_host}
-
-    # Cleanup the temp directories on target host
-    ssh -q ${target_host} "rm -rf ${tmp_dir}"
 }
 
 function get_nc_pid() {
