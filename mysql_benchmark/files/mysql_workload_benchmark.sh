@@ -282,7 +282,7 @@ function transfer_benchmark_reports() {
 # Usage info
 function show_help() {
 cat << EOF
-Usage: ${0##*/} --master-host MASTER_HOST --slave-host SLAVE_HOST --target-host TARGET_HOST --tcpdump-file TCPDUMP_FILE --mysql-user MYSQL_USERNAME --mysql-password MYSQL_PASSWORD [options]
+Usage: ${0##*/} --master-host MASTER_HOST --slave-host SLAVE_HOST --target-host TARGET_HOST --tcpdump-file TCPDUMP_FILE --target-tmpdir TARGET_TMPDIR --mysql-user MYSQL_USERNAME --mysql-password MYSQL_PASSWORD [options]
 Capture tcpdump output from MASTER_HOST and replay it on SLAVE_HOST and TARGET_HOST and compare the query times.
 
 Options:
@@ -295,9 +295,9 @@ Options:
                                     and which will be used as a baseline
     --target-host TARGET_HOST       the host that has to be benchmarked
     --tcpdump-file TCPDUMP_FILE     the path of the tcpdump file
-    --target-tmpdir TARGET_TMPDIR   (default= /tmp) the directory on
-                                    TARGET_HOST that will be used for temporary
-                                    files needed during the benchmark
+    --target-tmpdir TARGET_TMPDIR   the directory on TARGET_HOST that will be
+                                    used for temporary files needed during
+                                    the benchmark
     --output-dir OUTPUT_DIR         (default= /tmp) the directory that stores
                                     the benchmark reports
     --mysql-user MYSQL_USERNAME     the name of the MySQL user that will be
@@ -384,6 +384,8 @@ do
 done
 
 [[ -z ${tcpdump_file} ]] && show_help_and_exit >&2
+
+[[ -z ${tmp_dir} ]] && show_help_and_exit >&2
 
 [[ -z ${mysql_username} ]] && show_help_and_exit >&2
 
