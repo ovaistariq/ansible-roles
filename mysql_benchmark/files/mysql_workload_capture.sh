@@ -54,6 +54,8 @@ function cleanup() {
 
     # Cleanup any outstanding netcat sockets
     cleanup_nc ${nc_port} ${target_host}
+
+    #TODO: add cleanup code to cleanup any running tcpdump processes
 }
 
 function get_nc_pid() {
