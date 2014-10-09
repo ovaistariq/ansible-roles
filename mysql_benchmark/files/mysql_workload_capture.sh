@@ -203,7 +203,7 @@ Options:
     --tcpdump-seconds TCPDUMP_TIME_LIMIT_SEC (default= 300s) the number of
                                              seconds for which tcpdump will be
                                              run on SOURCE_HOST
-    --target-tmpdir TARGET_TMPDIR            (default= /tmp) the directory on
+    --output-dir TARGET_TMPDIR               (default= /tmp) the directory on
                                              TARGET_HOST that will be used for
                                              storing the tcpdump file
 EOF
