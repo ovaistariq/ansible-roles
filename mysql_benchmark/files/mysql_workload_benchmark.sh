@@ -71,10 +71,7 @@ function show_error_n_exit() {
 function cleanup() {
     vlog "Doing cleanup before exiting"
 
-    # Cleanup the temp directories on target host
-    ssh -q ${target_host} "rm -rf ${tmp_dir}"
-
-    #TODO: add cleanup code to cleanup any running tcpdump or ptqd processes
+    #TODO: add cleanup code to cleanup any running ptqd processes
 }
 
 function check_pid() {
