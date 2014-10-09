@@ -266,6 +266,10 @@ done
 [[ -z ${tcpdump_time_limit_sec} ]] && show_help_and_exit >&2
 
 
+# Setup directory names
+output_dir="${output_dir}/master-${master_host}"
+
+
 # Test that all tools are available
 for tool_bin in ${tcpdump_bin} ${nc_bin}
 do
