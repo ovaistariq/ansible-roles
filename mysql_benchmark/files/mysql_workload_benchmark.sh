@@ -4,6 +4,10 @@
 script_root=$(dirname $(readlink -f $0))
 current_date=$(date +%Y_%m_%d_%H_%M_%S)
 
+# The prod master that will be used to calculate thread concurrency and list
+# of active databases that will be used during the benchmark queries run
+master_host=
+
 # The host that we want to compare the performance too
 slave_host=
 
