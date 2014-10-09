@@ -14,9 +14,6 @@ slave_host=
 # The host that we want to benchmark to guage performance
 target_host=
 
-# The tcpdump file name
-tcpdump_file=
-
 # The directory on the target host where benchmark data will be temporarily 
 # stored
 tmp_dir="/tmp"
@@ -45,6 +42,7 @@ slave_tmp_dir=
 target_tmp_dir=
 
 # Setup file prefixes
+tcpdump_filename=mysql.tcp
 ptqd_filename=ptqd.txt
 ptqd_slowlog_name=mysql.slow.log
 
@@ -130,6 +128,7 @@ function generate_slowlog_from_tcpdump() {
 #    set -x
 
     local slowlog_file="${master_tmp_dir}/${ptqd_slowlog_name}"
+    local tcpdump_file="${master_tmp_dir}/${tcpdump_filename}"
 
     ptqd_args="--type tcpdump ${tcpdump_file} --output slowlog --no-report --filter '(\$event->{fingerprint} =~ m/^select/i) && (\$event->{arg} !~ m/for update/i) && (\$event->{fingerprint} !~ m/users_online/i)'"
 
@@ -279,7 +278,7 @@ function transfer_benchmark_reports() {
 # Usage info
 function show_help() {
 cat << EOF
-Usage: ${0##*/} --master-host MASTER_HOST --slave-host SLAVE_HOST --target-host TARGET_HOST --tcpdump-file TCPDUMP_FILE --target-tmpdir TARGET_TMPDIR --mysql-user MYSQL_USERNAME --mysql-password MYSQL_PASSWORD [options]
+Usage: ${0##*/} --master-host MASTER_HOST --slave-host SLAVE_HOST --target-host TARGET_HOST --target-tmpdir TARGET_TMPDIR --mysql-user MYSQL_USERNAME --mysql-password MYSQL_PASSWORD [options]
 Capture tcpdump output from MASTER_HOST and replay it on SLAVE_HOST and TARGET_HOST and compare the query times.
 
 Options:
@@ -291,7 +290,6 @@ Options:
     --slave-host SLAVE_HOST         the slave host which is to be benchmarked
                                     and which will be used as a baseline
     --target-host TARGET_HOST       the host that has to be benchmarked
-    --tcpdump-file TCPDUMP_FILE     the path of the tcpdump file
     --target-tmpdir TARGET_TMPDIR   the directory on TARGET_HOST that will be
                                     used for temporary files needed during
                                     the benchmark
@@ -312,7 +310,7 @@ function show_help_and_exit() {
 }
 
 # Command line processing
-OPTS=$(getopt -o hcm:s:T:f:t:o:u:p: --long help,cold-run,master-host:,slave-host:,target-host:,tcpdump-file:,target-tmpdir:,output-dir:,mysql-user:,mysql-password: -n 'mysql_workload_benchmark.sh' -- "$@")
+OPTS=$(getopt -o hcm:s:T:t:o:u:p: --long help,cold-run,master-host:,slave-host:,target-host:,target-tmpdir:,output-dir:,mysql-user:,mysql-password: -n 'mysql_workload_benchmark.sh' -- "$@")
 [ $? != 0 ] && show_help_and_exit
 
 eval set -- "$OPTS"
@@ -329,10 +327,6 @@ while true; do
                                 ;;
     -T | --target-host )
                                 target_host="$2";
-                                shift; shift
-                                ;;
-    -f | --tcpdump-file )
-                                tcpdump_file="$2";
                                 shift; shift
                                 ;;
     -t | --target-tmpdir )
@@ -379,8 +373,6 @@ do
     ssh -q ${host} "exit"
     (( $? != 0 )) && show_error_n_exit "Could not SSH into ${host}"
 done
-
-[[ -z ${tcpdump_file} ]] && show_help_and_exit >&2
 
 [[ -z ${tmp_dir} ]] && show_help_and_exit >&2
 
