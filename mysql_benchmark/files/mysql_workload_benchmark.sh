@@ -4,17 +4,11 @@
 script_root=$(dirname $(readlink -f $0))
 current_date=$(date +%Y_%m_%d_%H_%M_%S)
 
-# The prod master that will be used to capture the prod workload
-master_host=
-
 # The host that we want to compare the performance too
 slave_host=
 
 # The host that we want to benchmark to guage performance
 target_host=
-
-# The amount of seconds up to which tcpdump must be run to capture the queries
-tcpdump_time_limit_sec=300
 
 # The directory on the target host where benchmark data will be temporarily 
 # stored
@@ -33,34 +27,24 @@ test_only=
 mysql_username=
 mysql_password=
 
-# Should the benchmark run be interactive. If its interactive, then each 
-# important step will be preceeded with a prompt. By default the benchmark
-# run is non-interactive
-interactive=0
-
 # Should the benchmark be run with cold InnoDB Buffer Pool cache. When this
 # is enabled then the Buffer Pool is not warmed up before replaying the
 # workload. This can be important in cases where you want to test MySQL
 # performance with cold caches
 benchmark_cold_run=0
 
-mysql_interface=eth0
-mysql_port=3306
-nc_port=7778
-
 # The temporary directories names
-master_tmp_dir=
 slave_tmp_dir=
 target_tmp_dir=
 
+# The tcpdump file name
+tcpdump_file=
+
 # Setup file prefixes
-tcpdump_filename=mysql.tcp
 ptqd_filename=ptqd.txt
-ptqd_slowlog_name=ptqd.slow.log
+ptqd_slowlog_name=mysql.slow.log
 
 # Setup tools
-tcpdump_bin="/usr/sbin/tcpdump"
-nc_bin="/usr/bin/nc"
 mysqladmin_bin="/usr/bin/mysqladmin"
 mysql_bin="/usr/bin/mysql"
 pt_query_digest_bin="/usr/bin/pt-query-digest"
@@ -83,31 +67,10 @@ function show_error_n_exit() {
 function cleanup() {
     vlog "Doing cleanup before exiting"
 
-    # Cleanup any outstanding netcat sockets
-    cleanup_nc ${nc_port} ${target_host}
-
     # Cleanup the temp directories on target host
     ssh -q ${target_host} "rm -rf ${tmp_dir}"
-}
 
-function get_nc_pid() {
-#    set -x
-    local port=$1
-    local remote_host=$2
-
-    local pid=$(ssh ${remote_host} "ps -aef" | grep nc | grep -v bash | grep ${port} | awk '{ print $2 }')
-    echo ${pid}
-#    set +x
-}
-
-function cleanup_nc() {
-    local port=$1
-    local remote_host=$2
-
-    local pid=$(get_nc_pid ${port} ${remote_host})
-    vlog "Killing nc pid ${pid}"
-
-    [[ "${pid}" != '' && "${pid}" != 0 ]] && ssh ${remote_host} "kill ${pid} && (kill ${pid} && kill -9 ${pid})" || :
+    #TODO: add cleanup code to cleanup any running tcpdump or ptqd processes
 }
 
 function check_pid() {
@@ -120,62 +83,14 @@ function check_pid() {
 #    set +x
 }
 
-# waits ~10 seconds for nc to open the port and then reports ready
-function wait_for_nc()
-{
-#    set -x
-    local port=$1
-    local remote_host=$2
-
-    for i in $(seq 1 50)
-    do
-        ssh ${remote_host} "netstat -nptl 2>/dev/null" | grep '/nc\s*$' | awk '{ print $4 }' | \
-        sed 's/.*://' | grep \^${port}\$ >/dev/null && break
-        sleep 0.2
-    done
-
-    vlog "ready ${remote_host}:${port}"
-#    set +x
-}
-
 function setup_directories() {
-    vlog "Setting up directory ${tmp_dir} on target host"
+    vlog "Setting up directories ${tmp_dir} ${slave_tmp_dir} ${target_tmp_dir} on target host"
 
     # Initialize temp directories to target host
-    ssh -q ${target_host} "mkdir -p ${tmp_dir} ${master_tmp_dir} ${slave_tmp_dir} ${target_tmp_dir}"
+    ssh -q ${target_host} "mkdir -p ${tmp_dir} ${slave_tmp_dir} ${target_tmp_dir}"
 
     vlog "Setting up directory ${output_dir} on localhost"
     mkdir -p ${output_dir}
-}
-
-function test_remote_sockets() {
-#    set -x
-
-    vlog "Testing remote communication: ${master_host} <-> ${target_host}"
-
-    wait_for_nc ${nc_port} ${target_host} &
-
-    # Create a test socket to test to see if we can create and send to sockets
-    ssh ${target_host} "nohup bash -c \"(${nc_bin} -dl ${nc_port} > /tmp/mysql_workload_benchmark_nc_hello.txt) &\" > /dev/null 2>&1"
-
-    wait %% # join wait_for_nc thread
-
-    # check if nc is running, if not then it errored out
-    local nc_pid=$(get_nc_pid ${nc_port} ${target_host})
-    (( $(check_pid ${nc_pid} ${target_host} ) != 0 )) && show_error_n_exit "Could not create a socket on ${target_host}"
-
-    ssh ${master_host} "echo 'hello world' | ${nc_bin} ${target_host} ${nc_port}"
-    if [[ $? != 0 ]]
-    then
-        cleanup_nc ${nc_port} ${target_host}
-        show_error_n_exit "Could not connect to remote socket on ${target_host} from ${master_host}"
-    fi
-
-    vlog "${master_host} <-> ${target_host} can communicate on ${nc_port}"
-
-#    set +x
-
-    return $?
 }
 
 function test_mysql_access() {
@@ -203,11 +118,6 @@ function do_test() {
 #    set -x
     local ret_code=
 
-    # Test for remote sockets via netcat
-    test_remote_sockets
-    ret_code=$?
-    (( ${ret_code} != 0 )) && exit ret_code
-
     # Test for MySQL access from the target host
     test_mysql_access
     ret_code=$?
@@ -215,58 +125,9 @@ function do_test() {
 #    set +x
 }
 
-function get_tcpdump_from_master() {
-#    set -x
-
-    local tcpdump_args="-i ${mysql_interface} -s 65535 -x -n -q -tttt 'port ${mysql_port} and tcp[1] & 7 == 2 and tcp[3] & 7 == 2'"
-    local tcpdump_file="${master_tmp_dir}/${tcpdump_filename}"
-
-    vlog "Starting to capture production queries via tcpdump on the master ${master_host}"
-
-    # If the user wishes to cancel the benchmark run then we exit from here
-    if [[ "${interactive}" == "1" ]]
-    then
-        proceed_with_benchmark=
-        printf 1>&2 "\n\tWould you like to proceed [y/n]: "
-        read proceed_with_benchmark
-        echo
-
-        if [[ "${proceed_with_benchmark}" != "y" ]]
-        then
-            cleanup
-            exit 22
-        fi
-    fi
-
-    # Cleanup old sockets
-    vlog "Cleaning up old netcat sockets"
-    cleanup_nc ${nc_port} ${target_host}
-
-    wait_for_nc ${nc_port} ${target_host} &
-
-    # Create receiving socket on slave
-    vlog "Creating receiving socket on ${target_host}"
-    ssh ${target_host} "nohup bash -c \"($nc_bin -dl $nc_port > ${tcpdump_file}) &\" > /dev/null 2>&1"
-
-    wait %% # join wait_for_nc thread
-
-    # check if nc is running, if not then it errored out
-    local nc_pid=$(get_nc_pid ${nc_port} ${target_host})
-    (( $(check_pid ${nc_pid} ${target_host} ) != 0 )) && display_error_n_exit "Could not create a socket on ${target_host}"
-
-    vlog "Capturing MySQL workload on ${master_host} via tcpdump for ${tcpdump_time_limit_sec} seconds"
-    vlog "Executing ${tcpdump_bin} ${tcpdump_args} on ${master_host}"
-    ssh ${master_host} "timeout ${tcpdump_time_limit_sec} ${tcpdump_bin} ${tcpdump_args} 2> /dev/null | ${nc_bin} ${target_host} ${nc_port}"
-
-    vlog "Tcpdump successfully streamed from ${master_host} to ${target_host}:${tcpdump_file}"
-
-#    set +x
-}
-
 function generate_slowlog_from_tcpdump() {
 #    set -x
 
-    local tcpdump_file="${master_tmp_dir}/${tcpdump_filename}"
     local slowlog_file="${master_tmp_dir}/${ptqd_slowlog_name}"
 
     ptqd_args="--type tcpdump ${tcpdump_file} --output slowlog --no-report --filter '(\$event->{fingerprint} =~ m/^select/i) && (\$event->{arg} !~ m/for update/i) && (\$event->{fingerprint} !~ m/users_online/i)'"
@@ -357,21 +218,6 @@ function run_benchmark() {
     # Run the benchmark against the slave host
     vlog "Starting to run the benchmark on the slave host ${slave_host} with a concurrency of ${mysql_thd_conc}"
 
-    # If the user wishes to cancel the benchmark run then we exit from here
-    if [[ "${interactive}" == "1" ]]
-    then
-        proceed_with_benchmark=
-        printf 1>&2 "\n\tWould you like to proceed [y/n]: "
-        read proceed_with_benchmark
-        echo
-        
-        if [[ "${proceed_with_benchmark}" != "y" ]]
-        then
-            cleanup
-            exit 22
-        fi
-    fi
-
     for db in ${active_db_list}
     do
         echo "Benchmarking the schema ${db}"
@@ -382,21 +228,6 @@ function run_benchmark() {
 
     # Run the benchmark against the target host
     vlog "Starting to run the benchmark on the target host ${target_host} with a concurrency of ${mysql_thd_conc}"
-
-    # If the user wishes to cancel the benchmark run then we exit from here
-    if [[ "${interactive}" == "1" ]]
-    then
-        proceed_with_benchmark=
-        printf 1>&2 "\n\tWould you like to proceed [y/n]: "
-        read proceed_with_benchmark
-        echo
-
-        if [[ "${proceed_with_benchmark}" != "y" ]]
-        then
-            cleanup
-            exit 22
-        fi
-    fi
 
     for db in ${active_db_list}
     do
@@ -453,16 +284,12 @@ Capture tcpdump output from MASTER_HOST and replay it on SLAVE_HOST and TARGET_H
 Options:
 
     --help                                      display this help and exit
-    --interactive                               should the benchmark be run interactively,
-                                                this is disabled by default
     --master-host MASTER_HOST                   the master host actively executing production
                                                 traffic that will be used to capture
                                                 queries via tcpdump
     --slave-host SLAVE_HOST                     the slave host which is to be benchmarked and
                                                 which will be used as a baseline
     --target-host TARGET_HOST                   the host that has to be benchmarked
-    --tcpdump-seconds TCPDUMP_TIME_LIMIT_SEC    (default= 300s) the number of seconds for
-                                                which tcpdump will be run on SOURCE_HOST
     --target-tmpdir TARGET_TMPDIR               (default= /tmp) the directory on TARGET_HOST
                                                 that will be used for temporary files needed
                                                 during the benchmark
@@ -483,7 +310,7 @@ function show_help_and_exit() {
 }
 
 # Command line processing
-OPTS=$(getopt -o hicm:s:T:l:t:o:u:p: --long help,interactive,cold-run,master-host:,slave-host:,target-host:,tcpdump-seconds:,target-tmpdir:,output-dir:,mysql-user:,mysql-password: -n 'mysql_workload_benchmark.sh' -- "$@")
+OPTS=$(getopt -o hcm:s:T:f:t:o:u:p: --long help,cold-run,master-host:,slave-host:,target-host:,tcpdump-file:,target-tmpdir:,output-dir:,mysql-user:,mysql-password: -n 'mysql_workload_benchmark.sh' -- "$@")
 [ $? != 0 ] && show_help_and_exit
 
 eval set -- "$OPTS"
@@ -502,8 +329,8 @@ while true; do
                                 target_host="$2";
                                 shift; shift
                                 ;;
-    -l | --tcpdump-seconds )
-                                tcpdump_time_limit_sec="$2";
+    -f | --tcpdump-file )
+                                tcpdump_file="$2";
                                 shift; shift
                                 ;;
     -t | --target-tmpdir )
@@ -520,9 +347,6 @@ while true; do
                                 ;;
     -p | --mysql-password )     mysql_password="$2";
                                 shift; shift
-                                ;;
-    -i | --interactive )        interactive=1
-                                shift;
                                 ;;
     -c | --cold-run )           benchmark_cold_run=1
                                 shift;
@@ -554,23 +378,17 @@ do
     (( $? != 0 )) && show_error_n_exit "Could not SSH into ${host}"
 done
 
-[[ -z ${tcpdump_time_limit_sec} ]] && show_help_and_exit >&2
-
 [[ -z ${mysql_username} ]] && show_help_and_exit >&2
 
 [[ -z ${mysql_password} ]] && show_help_and_exit >&2
 
 # Setup temporary directories
-tmp_dir="${tmp_dir}/${current_date}"
 master_tmp_dir="${tmp_dir}/master-${master_host}"
 slave_tmp_dir="${tmp_dir}/slave-${slave_host}"
 target_tmp_dir="${tmp_dir}/target-${target_host}"
 
-# Setup output directories
-output_dir="${output_dir}/${current_date}"
-
 # Test that all tools are available
-for tool_bin in ${tcpdump_bin} ${nc_bin} ${mysqladmin_bin} ${mysql_bin}
+for tool_bin in ${mysqladmin_bin} ${mysql_bin}
 do
     for host in ${master_host} ${slave_host} ${target_host}
     do
@@ -601,10 +419,6 @@ trap cleanup HUP PIPE INT TERM
 
 # Setup the directories needed on the source and target hosts
 setup_directories
-
-# Capture and transfer tcpdump from source to target host
-get_tcpdump_from_master
-    
 
 # Parse the source host tcpdump and generate slow log from it
 # This will be used by percona-playback
