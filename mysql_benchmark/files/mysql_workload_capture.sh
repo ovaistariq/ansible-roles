@@ -13,9 +13,8 @@ target_host=
 # The amount of seconds up to which tcpdump must be run to capture the queries
 tcpdump_time_limit_sec=300
 
-# The directory on the target host where benchmark data will be temporarily 
-# stored
-tmp_dir="/tmp"
+# The directory on the target host where tcpdump data will be stored
+output_dir=
 
 # In test only mode only netcat socket testing is performed
 test_only=
@@ -28,9 +27,6 @@ interactive=0
 mysql_interface=eth0
 mysql_port=3306
 nc_port=7778
-
-# The temporary directories names
-master_tmp_dir=
 
 # Setup file prefixes
 tcpdump_filename=mysql.tcp
@@ -109,10 +105,10 @@ function wait_for_nc()
 }
 
 function setup_directories() {
-    vlog "Setting up directory ${tmp_dir} on target host"
+    vlog "Setting up directory ${output_dir} on target host"
 
     # Initialize temp directories to target host
-    ssh -q ${target_host} "mkdir -p ${tmp_dir} ${master_tmp_dir}"
+    ssh -q ${target_host} "mkdir -p ${output_dir}"
 }
 
 function test_remote_sockets() {
@@ -160,7 +156,7 @@ function get_tcpdump_from_master() {
 #    set -x
 
     local tcpdump_args="-i ${mysql_interface} -s 65535 -x -n -q -tttt 'port ${mysql_port} and tcp[1] & 7 == 2 and tcp[3] & 7 == 2'"
-    local tcpdump_file="${master_tmp_dir}/${tcpdump_filename}"
+    local tcpdump_file="${output_dir}/${tcpdump_filename}"
 
     vlog "Starting to capture production queries via tcpdump on the master ${master_host}"
 
@@ -219,7 +215,7 @@ function show_help_and_exit() {
 }
 
 # Command line processing
-OPTS=$(getopt -o hm:T:l:t: --long help,master-host:,target-host:,tcpdump-seconds:,target-tmpdir: -n 'mysql_workload_capture.sh' -- "$@")
+OPTS=$(getopt -o hm:T:l:o: --long help,master-host:,target-host:,tcpdump-seconds:,output-dir: -n 'mysql_workload_capture.sh' -- "$@")
 [ $? != 0 ] && show_help_and_exit
 
 eval set -- "$OPTS"
@@ -238,8 +234,8 @@ while true; do
                                 tcpdump_time_limit_sec="$2";
                                 shift; shift
                                 ;;
-    -t | --target-tmpdir )
-                                tmp_dir="$2";
+    -o | --output-dir )
+                                output_dir="$2";
                                 shift; shift
                                 ;;
     -h | --help )
@@ -269,9 +265,6 @@ done
 
 [[ -z ${tcpdump_time_limit_sec} ]] && show_help_and_exit >&2
 
-# Setup temporary directories
-tmp_dir="${tmp_dir}/${current_date}"
-master_tmp_dir="${tmp_dir}/master-${master_host}"
 
 # Test that all tools are available
 for tool_bin in ${tcpdump_bin} ${nc_bin}
