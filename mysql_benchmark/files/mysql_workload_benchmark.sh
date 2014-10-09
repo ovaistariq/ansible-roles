@@ -14,6 +14,9 @@ slave_host=
 # The host that we want to benchmark to guage performance
 target_host=
 
+# The tcpdump file name
+tcpdump_file=
+
 # The directory on the target host where benchmark data will be temporarily 
 # stored
 tmp_dir="/tmp"
@@ -40,9 +43,6 @@ benchmark_cold_run=0
 # The temporary directories names
 slave_tmp_dir=
 target_tmp_dir=
-
-# The tcpdump file name
-tcpdump_file=
 
 # Setup file prefixes
 ptqd_filename=ptqd.txt
@@ -282,29 +282,30 @@ function transfer_benchmark_reports() {
 # Usage info
 function show_help() {
 cat << EOF
-Usage: ${0##*/} --master-host MASTER_HOST --slave-host SLAVE_HOST --target-host TARGET_HOST --mysql-user MYSQL_USERNAME --mysql-password MYSQL_PASSWORD [options]
+Usage: ${0##*/} --master-host MASTER_HOST --slave-host SLAVE_HOST --target-host TARGET_HOST --tcpdump-file TCPDUMP_FILE --mysql-user MYSQL_USERNAME --mysql-password MYSQL_PASSWORD [options]
 Capture tcpdump output from MASTER_HOST and replay it on SLAVE_HOST and TARGET_HOST and compare the query times.
 
 Options:
 
-    --help                                      display this help and exit
-    --master-host MASTER_HOST                   the master host actively executing production
-                                                traffic that will be used to capture
-                                                queries via tcpdump
-    --slave-host SLAVE_HOST                     the slave host which is to be benchmarked and
-                                                which will be used as a baseline
-    --target-host TARGET_HOST                   the host that has to be benchmarked
-    --target-tmpdir TARGET_TMPDIR               (default= /tmp) the directory on TARGET_HOST
-                                                that will be used for temporary files needed
-                                                during the benchmark
-    --output-dir OUTPUT_DIR                     (default= /tmp) the directory that stores the
-                                                benchmark reports
-    --mysql-user MYSQL_USERNAME                 the name of the MySQL user that will be used to
-                                                replay the benchmark queries on SLAVE_HOST and
-                                                TARGET_HOST
-    --mysql-password MYSQL_PASSWORD             the password for the MySQL user
-    --cold-run                                  run the benchmark with cold InnoDB Buffer Pool
-                                                cache, this is disabled by default
+    --help                          display this help and exit
+    --master-host MASTER_HOST       the master host actively executing
+                                    production traffic that will be used to
+                                    capture queries via tcpdump
+    --slave-host SLAVE_HOST         the slave host which is to be benchmarked
+                                    and which will be used as a baseline
+    --target-host TARGET_HOST       the host that has to be benchmarked
+    --tcpdump-file TCPDUMP_FILE     the path of the tcpdump file
+    --target-tmpdir TARGET_TMPDIR   (default= /tmp) the directory on
+                                    TARGET_HOST that will be used for temporary
+                                    files needed during the benchmark
+    --output-dir OUTPUT_DIR         (default= /tmp) the directory that stores
+                                    the benchmark reports
+    --mysql-user MYSQL_USERNAME     the name of the MySQL user that will be
+                                    used to replay the benchmark queries on
+                                    SLAVE_HOST and TARGET_HOST
+    --mysql-password MYSQL_PASSWORD the password for the MySQL user
+    --cold-run                      run the benchmark with cold InnoDB Buffer
+                                    Pool cache, this is disabled by default
 EOF
 }
 
@@ -381,6 +382,8 @@ do
     ssh -q ${host} "exit"
     (( $? != 0 )) && show_error_n_exit "Could not SSH into ${host}"
 done
+
+[[ -z ${tcpdump_file} ]] && show_help_and_exit >&2
 
 [[ -z ${mysql_username} ]] && show_help_and_exit >&2
 
