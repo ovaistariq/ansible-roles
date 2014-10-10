@@ -138,14 +138,14 @@ function run_benchmark() {
     ${pt_log_player_bin} --play ${master_sessions_dir} \
         --set-vars innodb_lock_wait_timeout=1 \
         --base-dir ${compare_host_results_dir} --only-select \
-        --threads ${mysql_thd_conc} h=${compare_host} 2> /dev/null
+        --threads ${mysql_thd_conc} h=${compare_host} #2> /dev/null
 
     # Run the benchmark against the target host
     vlog "Starting to run the benchmark on the target host ${target_host} with a concurrency of ${mysql_thd_conc}"
     ${pt_log_player_bin} --play ${master_sessions_dir} \
         --set-vars innodb_lock_wait_timeout=1 \
         --base-dir ${target_results_dir} --only-select \
-        --threads ${mysql_thd_conc} h=${target_host} 2> /dev/null
+        --threads ${mysql_thd_conc} h=${target_host} #2> /dev/null
 
     # Generating the pt-query-digest reports
     vlog "Generating the pt-query-digest reports on the benchmark runs"
