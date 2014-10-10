@@ -109,6 +109,7 @@ function run_upgrade_test() {
     local num_lines=$(wc -l ${output_dir}/${target_host}-pt_upgrade.log | awk '{print $1}')
     local stats_headline_line_num=$(grep -n "# Stats" ${output_dir}/${target_host}-pt_upgrade.log | awk -F: '{print $1}')
 
+    echo
     tail -$(( ${num_lines} - ${stats_headline_line_num} + 2 )) ${output_dir}/${target_host}-pt_upgrade.log
     echo
 
