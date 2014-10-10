@@ -143,7 +143,7 @@ function run_upgrade_test() {
     ptupg_args="--run-time=1h --upgrade-table=percona.pt_upgrade --report=hosts,stats --charset=utf8 --user=${mysql_username} --password=${mysql_password} ${slowlog_file} h=${target_host} h=${slave_host}"
 
     vlog "Executing ${pt_upgrade_bin} ${ptupg_args} on ${target_host}"
-    ssh ${target_host} "${pt_upgrade_bin} ${ptupg_args} > ${pt_upgrade_report} 2> /dev/null"
+    ssh ${target_host} "${pt_upgrade_bin} ${ptupg_args} > ${pt_upgrade_report}"
 
     scp ${target_host}:${pt_upgrade_report} ${output_dir}/target-${target_host}-pt_upgrade.log &> /dev/null
 
