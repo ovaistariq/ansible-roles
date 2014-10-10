@@ -80,7 +80,7 @@ function generate_slowlog_from_tcpdump() {
 
     ptqd_args="--type tcpdump ${tcpdump_file} --output slowlog --no-report --filter '(\$event->{fingerprint} =~ m/^select/i) && (\$event->{arg} !~ m/for update/i) && (\$event->{fingerprint} !~ m/users_online/i)'"
 
-    vlog "Executing ${pt_query_digest_bin} ${ptqd_args} on ${target_host}"
+    vlog "Executing ${pt_query_digest_bin} ${ptqd_args}"
     ${pt_query_digest_bin} ${ptqd_args} > ${slowlog_file} 2> /dev/null
 
     vlog "Slow log successfully generated and written to ${slowlog_file}"
