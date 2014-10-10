@@ -99,7 +99,7 @@ function run_upgrade_test() {
     local slowlog_file="${master_tmp_dir}/${ptqd_slowlog_name}"
     local pt_upgrade_report="${target_tmp_dir}/pt_upgrade.log"
 
-    ptupg_args="--run-time=1h --upgrade-table=percona.pt_upgrade --report=hosts,stats --charset=utf8 --user=${mysql_username} --password=${mysql_password} ${slowlog_file} h=${target_host} h=${compare_host}"
+    ptupg_args="--run-time=1h --upgrade-table=percona.pt_upgrade --report=hosts,stats --charset=utf8 ${slowlog_file} h=${target_host} h=${compare_host}"
 
     vlog "Executing ${pt_upgrade_bin} ${ptupg_args} on ${target_host}"
     ssh ${target_host} "${pt_upgrade_bin} ${ptupg_args} > ${pt_upgrade_report}"
