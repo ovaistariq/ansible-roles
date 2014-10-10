@@ -110,10 +110,11 @@ function run_upgrade_test() {
     local stats_headline_line_num=$(grep -n "# Stats" ${output_dir}/${target_host}-pt_upgrade.log | awk -F: '{print $1}')
 
     echo
-    tail -$(( ${num_lines} - ${stats_headline_line_num} + 2 )) ${output_dir}/${target_host}-pt_upgrade.log
-    echo
+    echo "###########################################################################"
+    tail -$(( ${num_lines} - ${stats_headline_line_num} - 2 )) ${output_dir}/${target_host}-pt_upgrade.log
+    echo "Detailed reports are available at ${output_dir}/${target_host}-pt_upgrade.log"
+    echo "###########################################################################"
 
-    vlog "Pt-upgrade run completed. Detailed report is available at ${output_dir}/${target_host}-pt_upgrade.log"
 #    set +x
 }
 
