@@ -78,7 +78,7 @@ function generate_slowlog_from_tcpdump() {
     local tcpdump_file="${master_tmp_dir}/${tcpdump_filename}"
     local slowlog_file="${master_tmp_dir}/${ptqd_slowlog_name}"
 
-    ptqd_args="--type tcpdump ${tcpdump_file} --output slowlog --no-report --filter '(\$event->{fingerprint} =~ m/^select/i) && (\$event->{arg} !~ m/for update/i) && (\$event->{fingerprint} !~ m/users_online/i)'"
+    ptqd_args="--type tcpdump ${tcpdump_file} --output slowlog --no-report --filter '($event->{fingerprint} =~ m/^select/i) && ($event->{arg} !~ m/for update/i) && ($event->{fingerprint} !~ m/users_online/i)'"
 
     vlog "Executing ${pt_query_digest_bin} ${ptqd_args}"
     ${pt_query_digest_bin} ${ptqd_args} > ${slowlog_file} 2> /dev/null
