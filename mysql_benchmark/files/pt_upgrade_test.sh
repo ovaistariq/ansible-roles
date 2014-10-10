@@ -106,10 +106,10 @@ function run_upgrade_test() {
 
     scp ${target_host}:${pt_upgrade_report} ${output_dir}/${target_host}-pt_upgrade.log &> /dev/null
 
-    local num_lines=$(wc -l ${pt_upgrade_report})
-    local stats_headline_line_num=$(grep -n "# Stats" ${pt_upgrade_report} | awk -F: '{print $1}')
+    local num_lines=$(wc -l ${output_dir}/${target_host}-pt_upgrade.log)
+    local stats_headline_line_num=$(grep -n "# Stats" ${output_dir}/${target_host}-pt_upgrade.log | awk -F: '{print $1}')
 
-    tail -$(( ${num_lines} - ${stats_headline_line_num} + 2 )) ${pt_upgrade_report}
+    tail -$(( ${num_lines} - ${stats_headline_line_num} + 2 )) ${output_dir}/${target_host}-pt_upgrade.log
     echo
 
     vlog "Pt-upgrade run completed. Detailed report is available at ${output_dir}/${target_host}-pt_upgrade.log"
