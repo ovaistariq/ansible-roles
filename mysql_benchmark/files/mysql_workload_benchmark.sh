@@ -16,10 +16,10 @@ target_host=
 
 # The directory on the target host where benchmark data will be temporarily 
 # stored
-tmp_dir="/tmp"
+tmp_dir=
 
 # The directory where the benchmark report will be stored
-output_dir="/tmp"
+output_dir=
 
 # Run the benchmark against this many active schemas
 num_db_benchmark=1
@@ -293,8 +293,8 @@ Options:
     --target-tmpdir TARGET_TMPDIR   the directory on TARGET_HOST that will be
                                     used for temporary files needed during
                                     the benchmark
-    --output-dir OUTPUT_DIR         (default= /tmp) the directory that stores
-                                    the benchmark reports
+    --output-dir OUTPUT_DIR         the directory that stores the benchmark
+                                    reports
     --mysql-user MYSQL_USERNAME     the name of the MySQL user that will be
                                     used to replay the benchmark queries on
                                     SLAVE_HOST and TARGET_HOST
