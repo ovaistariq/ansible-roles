@@ -1,7 +1,8 @@
-mysql_benchmark
+mysql_tests
 ===============
-This is a role to benchmark a MySQL server using production workload. The production workload is captured on the master and replayed on a production slave as a baseline. 
-The baseline is then compared to how replaying the same workload works on the target server that is being benchmarked.
+This is a role to test a MySQL server using production workload. The production workload is captured on the master and replayed on a production slave as a baseline. 
+The baseline is then compared to how replaying the same workload works on the target server that is being benchmarked. 
+Together with that pt-upgrade is used to run the queries on the target server and on a production slave and then result-sets are compared for any differences.
 
 Requirements
 ------------
@@ -14,9 +15,11 @@ Role Variables
 ## Mandatory
 These variables have to be defined in the playbook, since there are no defaults defined for them
 * `mysql_master_host` The production master from which workload will be captured using tcpdump
-* `mysql_slave_host` The production slave where workload will be replayed to set a baseline
-* `mysql_user` The MySQL user that would be used to replay the production read-only workload, make sure the MySQL user can connect from target host to MySQL running on itself and on the master and the slave hosts
-* `mysql_password` The password for the MySQL user
+* `mysql_compare_host` The production slave where workload will be replayed to set a baseline
+* `mysql_socket` The unix domain socket that MySQL will use
+* `mysql_root_password` The MySQL root password
+* `mysql_ro_username` The MySQL user with read-only privileges that will be used by the test scripts 
+* `mysql_ro_password` The password of the MySQL user with read-only privileges
 
 ## Standard
 * `benchmark_seconds` The number of seconds to capture the production workload for, defaults to 1800
@@ -26,7 +29,7 @@ These variables have to be defined in the playbook, since there are no defaults 
 Dependencies
 ------------
 
-* The role depends on the {{ mysql_master_host }}, {{ mysql_slave_host }} being accessible via ssh from the host that will use the role.
+* The role depends on the {{ mysql_master_host }}, {{ mysql_compare_host }} being accessible via ssh from the host that will use the role.
 * The role also depends on port 7778 being open between {{ mysql_master_host }} and the host which is supposed to be benchmarked.
 
 Example Playbook
@@ -36,7 +39,12 @@ Including an example of how to use this role with variables passed in as paramet
 
     - hosts: servers
       roles:
-         - { role: mysql_benchmark, mysql_master_host: "hostname", mysql_slave_host: "hostname", mysql_user: "changeme", mysql_password: "changeme" }
+         - { role: mysql_tests, mysql_master_host: "hostname", 
+                mysql_compare_host: "hostname", 
+                mysql_socket: "/data/mysql_data/mysql.sock",
+                mysql_root_password: "changeme",
+                mysql_ro_username: "some_username",
+                mysql_ro_password: "some_password" }
 
 Author Information
 ------------------

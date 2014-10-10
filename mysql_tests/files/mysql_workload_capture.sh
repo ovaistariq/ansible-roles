@@ -138,7 +138,7 @@ function get_tcpdump_from_master() {
 # Usage info
 function show_help() {
 cat << EOF
-Usage: ${0##*/} --master-host MASTER_HOST --target-host TARGET_HOST [options]
+Usage: ${0##*/} --master-host MASTER_HOST --target-host TARGET_HOST --tcpdump-seconds TCPDUMP_TIME_LIMIT_SEC [options]
 Capture tcpdump output from MASTER_HOST and stream it to TARGET_HOST.
 
 Options:
@@ -150,9 +150,8 @@ Options:
                                              tcpdump
     --target-host TARGET_HOST                the host that will use the tcpdump
                                              captured data
-    --tcpdump-seconds TCPDUMP_TIME_LIMIT_SEC (default= 300s) the number of
-                                             seconds for which tcpdump will be
-                                             run on SOURCE_HOST
+    --tcpdump-seconds TCPDUMP_TIME_LIMIT_SEC the number of seconds for which
+                                             tcpdump will be run on MASTER_HOST
     --output-dir TARGET_OUTPUTDIR            (default= /tmp) the directory on
                                              TARGET_HOST that will be used for
                                              storing the tcpdump file
