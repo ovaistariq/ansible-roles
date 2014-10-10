@@ -1,4 +1,4 @@
-#!/bin/bash -ue
+#!/bin/bash -u
 
 # Configuration options
 script_root=$(dirname $(readlink -f $0))
