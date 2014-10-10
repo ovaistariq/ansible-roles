@@ -163,7 +163,7 @@ function run_benchmark() {
             vlog "Warming up the buffer pool on the host ${host}"
             for db in ${active_db_list}; do
                 echo "Warming up schema ${db}"
-                pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --only-select --threads ${mysql_thd_conc} --no-results --iterations=3 h=${host},D=${db}"
+                pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --only-select --threads ${mysql_thd_conc} --no-results --iterations=3 h=${host}"
 
                 ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
             done
@@ -175,7 +175,7 @@ function run_benchmark() {
 
     for db in ${active_db_list}; do
         echo "Benchmarking the schema ${db}"
-        pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${compare_host_results_dir} --only-select --threads ${mysql_thd_conc} h=${compare_host},D=${db}"
+        pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${compare_host_results_dir} --only-select --threads ${mysql_thd_conc} h=${compare_host}"
 
         ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
     done
@@ -185,7 +185,7 @@ function run_benchmark() {
 
     for db in ${active_db_list}; do
         echo "Benchmarking the schema ${db}"
-        pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${target_results_dir} --only-select --threads ${mysql_thd_conc} h=localhost,D=${db}"
+        pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${target_results_dir} --only-select --threads ${mysql_thd_conc} h=localhost"
 
         ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
     done
