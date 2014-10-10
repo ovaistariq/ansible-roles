@@ -38,6 +38,7 @@ mysql_password=
 benchmark_cold_run=0
 
 # The temporary directories names
+master_tmp_dir=
 slave_tmp_dir=
 target_tmp_dir=
 
@@ -69,7 +70,7 @@ function show_error_n_exit() {
 function cleanup() {
     vlog "Doing cleanup before exiting"
 
-    #TODO: add cleanup code to cleanup any running ptqd processes
+    #TODO: add code to cleanup any running ptqd and pt-log-player processes
 }
 
 function check_pid() {
@@ -270,7 +271,7 @@ function transfer_benchmark_reports() {
 function show_help() {
 cat << EOF
 Usage: ${0##*/} --master-host MASTER_HOST --slave-host SLAVE_HOST --target-host TARGET_HOST --target-tmpdir TARGET_TMPDIR --mysql-user MYSQL_USERNAME --mysql-password MYSQL_PASSWORD [options]
-Capture tcpdump output from MASTER_HOST and replay it on SLAVE_HOST and TARGET_HOST and compare the query times.
+Replay MySQL production workload in tcpdump format on SLAVE_HOST and TARGET_HOST and compare the query times.
 
 Options:
 
@@ -365,6 +366,8 @@ for host in ${master_host} ${slave_host} ${target_host}; do
 done
 
 [[ -z ${tmp_dir} ]] && show_help_and_exit >&2
+
+[[ -z ${output_dir} ]] && show_help_and_exit >&2
 
 [[ -z ${mysql_username} ]] && show_help_and_exit >&2
 
