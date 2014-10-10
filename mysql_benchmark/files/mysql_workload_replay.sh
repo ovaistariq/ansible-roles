@@ -1,8 +1,7 @@
 #!/bin/bash -u
 
 # Configuration options
-# The prod master that will be used to calculate thread concurrency and list
-# of active databases that will be used during the benchmark queries run
+# The prod master that was used to capture prod workload
 master_host=
 
 # The host that we want to compare the performance too
@@ -17,9 +16,6 @@ tmp_dir=
 
 # The directory where the benchmark report will be stored
 output_dir=
-
-# Run the benchmark against this many active schemas
-num_db_benchmark=1
 
 # Should the benchmark be run with cold InnoDB Buffer Pool cache. When this
 # is enabled then the Buffer Pool is not warmed up before replaying the

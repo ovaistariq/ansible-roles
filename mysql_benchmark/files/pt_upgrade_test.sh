@@ -1,15 +1,11 @@
 #!/bin/bash -u
 
 # Configuration options
-script_root=$(dirname $(readlink -f $0))
-current_date=$(date +%Y_%m_%d_%H_%M_%S)
-
-# The prod master that will be used to calculate thread concurrency and list
-# of active databases that will be used during the benchmark queries run
+# The prod master that was used to capture prod workload
 master_host=
 
 # The host that we want to compare the performance too
-slave_host=
+compare_host=
 
 # The host that we want to benchmark to guage performance
 target_host=
@@ -21,16 +17,9 @@ tmp_dir=
 # The directory where the benchmark report will be stored
 output_dir=
 
-# In test only mode only MySQL access testing is performed
-test_only=
-
-# These should be read-only MySQL users
-mysql_username=
-mysql_password=
-
 # The temporary directories names
 master_tmp_dir=
-slave_tmp_dir=
+compare_host_tmp_dir=
 target_tmp_dir=
 
 # How many occurrences per query fingerprint
@@ -77,49 +66,19 @@ function check_pid() {
 }
 
 function setup_directories() {
-    vlog "Setting up directories ${tmp_dir} ${slave_tmp_dir} ${target_tmp_dir} on target host"
+    vlog "Setting up directories ${tmp_dir} ${compare_host_tmp_dir} ${target_tmp_dir} on target host"
 
     # Initialize temp directories to target host
-    ssh -q ${target_host} "mkdir -p ${tmp_dir} ${slave_tmp_dir} ${target_tmp_dir}"
+    ssh -q ${target_host} "mkdir -p ${tmp_dir} ${compare_host_tmp_dir} ${target_tmp_dir}"
 
     vlog "Setting up directory ${output_dir} on localhost"
     mkdir -p ${output_dir}
 }
 
-function test_mysql_access() {
-#    set -x
-    local mysqladmin_args=
-
-    for host in ${master_host} ${slave_host} localhost
-    do
-        vlog "Testing MySQL access on ${host} from ${target_host}"
-        mysqladmin_args="--user=${mysql_username} --password=${mysql_password} --host=${host}"
-
-        if (( $(ssh ${target_host} "${mysqladmin_bin} ${mysqladmin_args} ping &> /dev/null; echo $?") != 0 ))
-        then
-            echo "Could not connect to MySQL on ${host}"
-            exit 2003
-        fi
-    done
-
-    return 0
-
-#    set +x
-}
-
-function do_test() {
-#    set -x
-    local ret_code=
-
-    # Test for MySQL access from the target host
-    test_mysql_access
-    ret_code=$?
-    exit ${ret_code}
-#    set +x
-}
-
 function generate_slowlog_from_tcpdump() {
 #    set -x
+
+    vlog "Generating slowlog file from tcpdump to be used by pt-upgrade"
 
     local slowlog_file="${master_tmp_dir}/${ptqd_slowlog_name}"
     local tcpdump_file="${master_tmp_dir}/${tcpdump_filename}"
@@ -140,21 +99,21 @@ function run_upgrade_test() {
     local slowlog_file="${master_tmp_dir}/${ptqd_slowlog_name}"
     local pt_upgrade_report="${target_tmp_dir}/pt_upgrade.log"
 
-    ptupg_args="--run-time=1h --upgrade-table=percona.pt_upgrade --report=hosts,stats --charset=utf8 --user=${mysql_username} --password=${mysql_password} ${slowlog_file} h=${target_host} h=${slave_host}"
+    ptupg_args="--run-time=1h --upgrade-table=percona.pt_upgrade --report=hosts,stats --charset=utf8 --user=${mysql_username} --password=${mysql_password} ${slowlog_file} h=${target_host} h=${compare_host}"
 
     vlog "Executing ${pt_upgrade_bin} ${ptupg_args} on ${target_host}"
     ssh ${target_host} "${pt_upgrade_bin} ${ptupg_args} > ${pt_upgrade_report}"
 
-    scp ${target_host}:${pt_upgrade_report} ${output_dir}/target-${target_host}-pt_upgrade.log &> /dev/null
+    scp ${target_host}:${pt_upgrade_report} ${output_dir}/${target_host}-pt_upgrade.log &> /dev/null
 
-    vlog "Pt-upgrade run completed. Detailed report is available at ${output_dir}/target-${target_host}-pt_upgrade.log"
+    vlog "Pt-upgrade run completed. Detailed report is available at ${output_dir}/${target_host}-pt_upgrade.log"
 #    set +x
 }
 
 # Usage info
 function show_help() {
 cat << EOF
-Usage: ${0##*/} --master-host MASTER_HOST --slave-host SLAVE_HOST --target-host TARGET_HOST --target-tmpdir TARGET_TMPDIR --mysql-user MYSQL_USERNAME --mysql-password MYSQL_PASSWORD [options]
+Usage: ${0##*/} --master-host MASTER_HOST --compare-host COMPARE_HOST --target-host TARGET_HOST --target-tmpdir TARGET_TMPDIR --output-dir OUTPUT_DIR [options]
 Run pt-upgrade against MySQL production workload on SLAVE_HOST and TARGET_HOST and compare the query results.
 
 Options:
@@ -163,7 +122,7 @@ Options:
     --master-host MASTER_HOST       the master host actively executing
                                     production traffic that will be used to
                                     capture queries via tcpdump
-    --slave-host SLAVE_HOST         the slave host which is to be benchmarked
+    --compare-host COMPARE_HOST     the compare host which is to be benchmarked
                                     and which will be used as a baseline
     --target-host TARGET_HOST       the host that has to be benchmarked
     --target-tmpdir TARGET_TMPDIR   the directory on TARGET_HOST that will be
@@ -171,10 +130,6 @@ Options:
                                     the benchmark
     --output-dir OUTPUT_DIR         the directory that stores the benchmark
                                     reports
-    --mysql-user MYSQL_USERNAME     the name of the MySQL user that will be
-                                    used to replay the benchmark queries on
-                                    SLAVE_HOST and TARGET_HOST
-    --mysql-password MYSQL_PASSWORD the password for the MySQL user
 EOF
 }
 
@@ -184,7 +139,7 @@ function show_help_and_exit() {
 }
 
 # Command line processing
-OPTS=$(getopt -o hm:s:T:t:o:u:p: --long help,master-host:,slave-host:,target-host:,target-tmpdir:,output-dir:,mysql-user:,mysql-password: -n 'pt_upgrade_test.sh' -- "$@")
+OPTS=$(getopt -o hm:s:T:t:o: --long help,master-host:,compare-host:,target-host:,target-tmpdir:,output-dir: -n 'pt_upgrade_test.sh' -- "$@")
 [ $? != 0 ] && show_help_and_exit
 
 eval set -- "$OPTS"
@@ -195,8 +150,8 @@ while true; do
                                 master_host="$2";
                                 shift; shift
                                 ;;
-    -s | --slave-host )
-                                slave_host="$2";
+    -s | --compare-host )
+                                compare_host="$2";
                                 shift; shift
                                 ;;
     -T | --target-host )
@@ -209,13 +164,6 @@ while true; do
                                 ;;
     -o | --output-dir )
                                 output_dir="$2";
-                                shift; shift
-                                ;;
-    -u | --mysql-user )
-                                mysql_username="$2";
-                                shift; shift
-                                ;;
-    -p | --mysql-password )     mysql_password="$2";
                                 shift; shift
                                 ;;
     -h | --help )
@@ -235,11 +183,11 @@ done
 # Sanity checking of command line parameters
 [[ -z ${master_host} ]] && show_help_and_exit >&2
 
-[[ -z ${slave_host} ]] && show_help_and_exit >&2
+[[ -z ${compare_host} ]] && show_help_and_exit >&2
 
 [[ -z ${target_host} ]] && show_help_and_exit >&2
 
-for host in ${slave_host} ${target_host}; do
+for host in ${compare_host} ${target_host}; do
     ssh -q ${host} "exit"
     (( $? != 0 )) && show_error_n_exit "Could not SSH into ${host}"
 done
@@ -248,18 +196,14 @@ done
 
 [[ -z ${output_dir} ]] && show_help_and_exit >&2
 
-[[ -z ${mysql_username} ]] && show_help_and_exit >&2
-
-[[ -z ${mysql_password} ]] && show_help_and_exit >&2
-
 # Setup temporary directories
-master_tmp_dir="${tmp_dir}/master-${master_host}"
-slave_tmp_dir="${tmp_dir}/slave-${slave_host}"
-target_tmp_dir="${tmp_dir}/target-${target_host}"
+master_tmp_dir="${tmp_dir}/${master_host}"
+compare_host_tmp_dir="${tmp_dir}/${compare_host}"
+target_tmp_dir="${tmp_dir}/${target_host}"
 
 # Test that all tools are available
 for tool_bin in ${mysqladmin_bin} ${mysql_bin}; do
-    for host in ${master_host} ${slave_host} ${target_host}; do
+    for host in ${master_host} ${compare_host} ${target_host}; do
         if (( $(ssh ${host} "which $tool_bin" &> /dev/null; echo $?) != 0 )); then
             echo "Can't find $tool_bin in PATH on ${host}"
             exit 22 # OS error code  22:  Invalid argument
@@ -274,10 +218,6 @@ for tool_bin in ${pt_query_digest_bin} ${pt_upgrade_bin}; do
     fi
 done
 
-# Test if nc based sockets work to/from source and target hosts
-# and test for MySQL connectivity.
-[[ ! -z ${test_only} ]] && do_test
-
 
 # Do the actual stuff
 trap cleanup HUP PIPE INT TERM
@@ -287,7 +227,6 @@ setup_directories
 
 # Parse the source host tcpdump and generate slow log from it
 # This will be used by percona-playback
-vlog "Generating slowlog file from tcpdump to be used by pt-upgrade"
 generate_slowlog_from_tcpdump
 
 # Do the benchmark run
