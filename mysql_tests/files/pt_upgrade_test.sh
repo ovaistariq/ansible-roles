@@ -111,7 +111,7 @@ function run_upgrade_test() {
 
     echo
     echo "###########################################################################"
-    echo "Queries summary from running pt-upgrade on the hosts ${target_host} ${compare_host}"
+    echo "Queries summary from running pt-upgrade on ${target_host},${compare_host}"
     echo
     tail -$(( ${num_lines} - ${stats_headline_line_num} - 2 )) ${output_dir}/${target_host}-pt_upgrade.log
     echo "Detailed reports are available at ${output_dir}/${target_host}-pt_upgrade.log"
