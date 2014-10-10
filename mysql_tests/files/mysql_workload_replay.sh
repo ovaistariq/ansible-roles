@@ -126,22 +126,26 @@ function run_benchmark() {
     if [[ "${benchmark_cold_run}" == "0" ]]; then
         for host in ${compare_host} ${target_host}; do
             vlog "Warming up the buffer pool on the host ${host}"
-            pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --only-select --threads ${mysql_thd_conc} --no-results --iterations=3 h=${host}"
-            ${pt_log_player_bin} ${pt_log_player_args} 2> /dev/null
+            ${pt_log_player_bin} --play ${master_sessions_dir} \
+                --set-vars innodb_lock_wait_timeout=1 --only-select \
+                --threads ${mysql_thd_conc} --no-results --iterations=3 \
+                h=${host} 2> /dev/null
         done
     fi
 
     # Run the benchmark against the compare_host
     vlog "Starting to run the benchmark on the host ${compare_host} with a concurrency of ${mysql_thd_conc}"
-
-    pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${compare_host_results_dir} --only-select --threads ${mysql_thd_conc} h=${compare_host}"
-    ${pt_log_player_bin} ${pt_log_player_args} 2> /dev/null
+    ${pt_log_player_bin} --play ${master_sessions_dir} \
+        --set-vars innodb_lock_wait_timeout=1 \
+        --base-dir ${compare_host_results_dir} --only-select \
+        --threads ${mysql_thd_conc} h=${compare_host} 2> /dev/null
 
     # Run the benchmark against the target host
     vlog "Starting to run the benchmark on the target host ${target_host} with a concurrency of ${mysql_thd_conc}"
-
-    pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${target_results_dir} --only-select --threads ${mysql_thd_conc} h=${target_host}"
-    ${pt_log_player_bin} ${pt_log_player_args} 2> /dev/null
+    ${pt_log_player_bin} --play ${master_sessions_dir} \
+        --set-vars innodb_lock_wait_timeout=1 \
+        --base-dir ${target_results_dir} --only-select \
+        --threads ${mysql_thd_conc} h=${target_host} 2> /dev/null
 
     # Generating the pt-query-digest reports
     vlog "Generating the pt-query-digest reports on the benchmark runs"
