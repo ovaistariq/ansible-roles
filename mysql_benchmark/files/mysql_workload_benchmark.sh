@@ -96,13 +96,11 @@ function test_mysql_access() {
 #    set -x
     local mysqladmin_args=
 
-    for host in ${master_host} ${slave_host} localhost
-    do
+    for host in ${master_host} ${slave_host} localhost; do
         vlog "Testing MySQL access on ${host} from ${target_host}"
         mysqladmin_args="--user=${mysql_username} --password=${mysql_password} --host=${host}"
 
-        if (( $(ssh ${target_host} "${mysqladmin_bin} ${mysqladmin_args} ping &> /dev/null; echo $?") != 0 ))
-        then
+        if (( $(ssh ${target_host} "${mysqladmin_bin} ${mysqladmin_args} ping &> /dev/null; echo $?") != 0 )); then
             echo "Could not connect to MySQL on ${host}"
             exit 2003
         fi
@@ -187,8 +185,7 @@ function run_benchmark() {
     # Get list of active DBs
     vlog "Fetching the list of active DBs from the master ${master_host}"
     local active_db_list=$(get_active_db_list)
-    if [[ "${active_db_list}" == "" ]]
-    then
+    if [[ "${active_db_list}" == "" ]]; then
         echo "No database schemas found to run benchmark against"
         exit 22
     fi
@@ -200,13 +197,10 @@ function run_benchmark() {
     echo "${active_db_list}"
 
     # Warm up the buffer pool on the slave and target hosts
-    if [[ "${benchmark_cold_run}" == "0" ]]
-    then
-        for host in ${slave_host} ${target_host}
-        do
+    if [[ "${benchmark_cold_run}" == "0" ]]; then
+        for host in ${slave_host} ${target_host}; do
             vlog "Warming up the buffer pool on the host ${host}"
-            for db in ${active_db_list}
-            do
+            for db in ${active_db_list}; do
                 echo "Warming up schema ${db}"
                 pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --only-select --threads ${mysql_thd_conc} --no-results --iterations=3 h=${host},u=${mysql_username},p=${mysql_password},D=${db}"
 
@@ -218,8 +212,7 @@ function run_benchmark() {
     # Run the benchmark against the slave host
     vlog "Starting to run the benchmark on the slave host ${slave_host} with a concurrency of ${mysql_thd_conc}"
 
-    for db in ${active_db_list}
-    do
+    for db in ${active_db_list}; do
         echo "Benchmarking the schema ${db}"
         pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${slave_results_dir} --only-select --threads ${mysql_thd_conc} h=${slave_host},u=${mysql_username},p=${mysql_password},D=${db}"
 
@@ -229,8 +222,7 @@ function run_benchmark() {
     # Run the benchmark against the target host
     vlog "Starting to run the benchmark on the target host ${target_host} with a concurrency of ${mysql_thd_conc}"
 
-    for db in ${active_db_list}
-    do
+    for db in ${active_db_list}; do
         echo "Benchmarking the schema ${db}"
         pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${target_results_dir} --only-select --threads ${mysql_thd_conc} h=localhost,u=${mysql_username},p=${mysql_password},D=${db}"
 
@@ -239,8 +231,7 @@ function run_benchmark() {
 
     # Generating the pt-query-digest reports
     vlog "Generating the pt-query-digest reports on the benchmark runs"
-    for dir in ${slave_tmp_dir} ${target_tmp_dir}
-    do
+    for dir in ${slave_tmp_dir} ${target_tmp_dir}; do
         ssh ${target_host} "${pt_query_digest_bin} ${dir}/results/* --limit=100 > ${dir}/ptqd.txt"
     done
 
@@ -368,8 +359,7 @@ done
 
 [[ -z ${target_host} ]] && show_help_and_exit >&2
 
-for host in ${master_host} ${slave_host} ${target_host}
-do
+for host in ${master_host} ${slave_host} ${target_host}; do
     ssh -q ${host} "exit"
     (( $? != 0 )) && show_error_n_exit "Could not SSH into ${host}"
 done
@@ -386,22 +376,17 @@ slave_tmp_dir="${tmp_dir}/slave-${slave_host}"
 target_tmp_dir="${tmp_dir}/target-${target_host}"
 
 # Test that all tools are available
-for tool_bin in ${mysqladmin_bin} ${mysql_bin}
-do
-    for host in ${master_host} ${slave_host} ${target_host}
-    do
-        if (( $(ssh ${host} "which $tool_bin" &> /dev/null; echo $?) != 0 ))
-        then
+for tool_bin in ${mysqladmin_bin} ${mysql_bin}; do
+    for host in ${master_host} ${slave_host} ${target_host}; do
+        if (( $(ssh ${host} "which $tool_bin" &> /dev/null; echo $?) != 0 )); then
             echo "Can't find $tool_bin in PATH on ${host}"
             exit 22 # OS error code  22:  Invalid argument
         fi
     done
 done
 
-for tool_bin in ${pt_query_digest_bin} ${pt_log_player_bin}
-do
-    if (( $(ssh ${target_host} "which $tool_bin" &> /dev/null; echo $?) != 0 ))
-    then
+for tool_bin in ${pt_query_digest_bin} ${pt_log_player_bin}; do
+    if (( $(ssh ${target_host} "which $tool_bin" &> /dev/null; echo $?) != 0 )); then
         echo "Can't find $tool_bin in PATH on ${target_host}"
         exit 22 # OS error code  22:  Invalid argument
     fi

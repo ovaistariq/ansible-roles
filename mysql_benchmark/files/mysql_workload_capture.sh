@@ -95,8 +95,7 @@ function wait_for_nc()
     local port=$1
     local remote_host=$2
 
-    for i in $(seq 1 50)
-    do
+    for i in $(seq 1 50); do
         ssh ${remote_host} "netstat -nptl 2>/dev/null" | grep '/nc\s*$' | awk '{ print $4 }' | \
         sed 's/.*://' | grep \^${port}\$ >/dev/null && break
         sleep 0.2
@@ -130,8 +129,7 @@ function test_remote_sockets() {
     (( $(check_pid ${nc_pid} ${target_host} ) != 0 )) && show_error_n_exit "Could not create a socket on ${target_host}"
 
     ssh ${master_host} "echo 'hello world' | ${nc_bin} ${target_host} ${nc_port}"
-    if [[ $? != 0 ]]
-    then
+    if [[ $? != 0 ]]; then
         cleanup_nc ${nc_port} ${target_host}
         show_error_n_exit "Could not connect to remote socket on ${target_host} from ${master_host}"
     fi
@@ -259,8 +257,7 @@ done
 
 [[ -z ${target_host} ]] && show_help_and_exit >&2
 
-for host in ${master_host} ${target_host}
-do
+for host in ${master_host} ${target_host}; do
     ssh -q ${host} "exit"
     (( $? != 0 )) && show_error_n_exit "Could not SSH into ${host}"
 done
@@ -273,10 +270,8 @@ output_dir="${output_dir}/master-${master_host}"
 
 
 # Test that all tools are available
-for tool_bin in ${tcpdump_bin} ${nc_bin}
-do
-    for host in ${master_host} ${target_host}
-    do
+for tool_bin in ${tcpdump_bin} ${nc_bin}; do
+    for host in ${master_host} ${target_host}; do
         if (( $(ssh ${host} "which $tool_bin" &> /dev/null; echo $?) != 0 ))
         then
             echo "Can't find $tool_bin in PATH on ${host}"
