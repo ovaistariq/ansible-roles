@@ -10,12 +10,12 @@ compare_host=
 # The host that we want to benchmark to guage performance
 target_host=
 
-# The directory on the target host where benchmark data will be temporarily 
-# stored
-tmp_dir=
-
-# The directory where the benchmark report will be stored
+# The directory where the pt-upgrade related data will be stored
 output_dir=
+
+# Read-only MySQL user credentials
+mysql_username=
+mysql_password=
 
 # The temporary directories names
 master_tmp_dir=
@@ -66,13 +66,8 @@ function check_pid() {
 }
 
 function setup_directories() {
-    vlog "Setting up directories ${tmp_dir} ${compare_host_tmp_dir} ${target_tmp_dir} on target host"
-
-    # Initialize temp directories to target host
-    ssh -q ${target_host} "mkdir -p ${tmp_dir} ${compare_host_tmp_dir} ${target_tmp_dir}"
-
-    vlog "Setting up directory ${output_dir} on localhost"
-    mkdir -p ${output_dir}
+    vlog "Setting up directory ${output_dir} ${target_tmp_dir} ${compare_host_tmp_dir} ${master_tmp_dir}"
+    mkdir -p ${output_dir} ${target_tmp_dir} ${compare_host_tmp_dir} ${master_tmp_dir}
 }
 
 function generate_slowlog_from_tcpdump() {
@@ -114,7 +109,8 @@ function run_upgrade_test() {
     echo "Queries summary from running pt-upgrade on ${target_host},${compare_host}"
     echo
     tail -$(( ${num_lines} - ${stats_headline_line_num} - 2 )) ${output_dir}/${target_host}-pt_upgrade.log
-    echo "Detailed reports are available at ${output_dir}/${target_host}-pt_upgrade.log"
+    echo "Detailed report is available at:"
+    echo "${output_dir}/${target_host}-pt_upgrade.log"
     echo "###########################################################################"
 
 #    set +x
@@ -123,7 +119,7 @@ function run_upgrade_test() {
 # Usage info
 function show_help() {
 cat << EOF
-Usage: ${0##*/} --master-host MASTER_HOST --compare-host COMPARE_HOST --target-host TARGET_HOST --target-tmpdir TARGET_TMPDIR --output-dir OUTPUT_DIR [options]
+Usage: ${0##*/} --master-host MASTER_HOST --compare-host COMPARE_HOST --target-host TARGET_HOST --target-tmpdir TARGET_TMPDIR --output-dir OUTPUT_DIR --mysql_user MYSQL_USER --mysql_password MYSQL_PASSWORD [options]
 Run pt-upgrade against MySQL production workload on SLAVE_HOST and TARGET_HOST and compare the query results.
 
 Options:
@@ -135,11 +131,11 @@ Options:
     --compare-host COMPARE_HOST     the compare host which is to be benchmarked
                                     and which will be used as a baseline
     --target-host TARGET_HOST       the host that has to be benchmarked
-    --target-tmpdir TARGET_TMPDIR   the directory on TARGET_HOST that will be
-                                    used for temporary files needed during
-                                    the benchmark
-    --output-dir OUTPUT_DIR         the directory that stores the benchmark
+    --output-dir OUTPUT_DIR         the directory that stores the pt-upgrade
                                     reports
+    --mysql_user MYSQL_USER         the MySQL read-only username that would
+                                    be used to run the queries
+    --mysql_password MYSQL_PASSWORD the MySQL read-only user password
 EOF
 }
 
@@ -149,7 +145,7 @@ function show_help_and_exit() {
 }
 
 # Command line processing
-OPTS=$(getopt -o hm:s:T:t:o: --long help,master-host:,compare-host:,target-host:,target-tmpdir:,output-dir: -n 'pt_upgrade_test.sh' -- "$@")
+OPTS=$(getopt -o hm:s:T:o:u:p: --long help,master-host:,compare-host:,target-host:,output-dir:,mysql-user:,mysql-password: -n 'pt_upgrade_test.sh' -- "$@")
 [ $? != 0 ] && show_help_and_exit
 
 eval set -- "$OPTS"
@@ -168,12 +164,16 @@ while true; do
                                 target_host="$2";
                                 shift; shift
                                 ;;
-    -t | --target-tmpdir )
-                                tmp_dir="$2";
-                                shift; shift
-                                ;;
     -o | --output-dir )
                                 output_dir="$2";
+                                shift; shift
+                                ;;
+    -u | --mysql-user )
+                                mysql_username="$2";
+                                shift; shift
+                                ;;
+    -p | --mysql-password )
+                                mysql_password="$2";
                                 shift; shift
                                 ;;
     -h | --help )
@@ -202,14 +202,16 @@ for host in ${compare_host} ${target_host}; do
     (( $? != 0 )) && show_error_n_exit "Could not SSH into ${host}"
 done
 
-[[ -z ${tmp_dir} ]] && show_help_and_exit >&2
-
 [[ -z ${output_dir} ]] && show_help_and_exit >&2
 
+[[ -z ${mysql_username} ]] && show_help_and_exit >&2
+
+[[ -z ${mysql_password} ]] && show_help_and_exit >&2
+
 # Setup temporary directories
-master_tmp_dir="${tmp_dir}/${master_host}"
-compare_host_tmp_dir="${tmp_dir}/${compare_host}"
-target_tmp_dir="${tmp_dir}/${target_host}"
+master_tmp_dir="${output_dir}/${master_host}"
+compare_host_tmp_dir="${output_dir}/${compare_host}"
+target_tmp_dir="${output_dir}/${target_host}"
 
 # Test that all tools are available
 for tool_bin in ${mysqladmin_bin} ${mysql_bin}; do
@@ -222,8 +224,8 @@ for tool_bin in ${mysqladmin_bin} ${mysql_bin}; do
 done
 
 for tool_bin in ${pt_query_digest_bin} ${pt_upgrade_bin}; do
-    if (( $(ssh ${target_host} "which $tool_bin" &> /dev/null; echo $?) != 0 )); then
-        echo "Can't find $tool_bin in PATH on ${target_host}"
+    if (( $(which ${tool_bin} &> /dev/null; echo $?) != 0 )); then
+        echo "Can't find ${tool_bin}"
         exit 22 # OS error code  22:  Invalid argument
     fi
 done
