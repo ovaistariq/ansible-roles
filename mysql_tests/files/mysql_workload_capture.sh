@@ -10,7 +10,11 @@ target_host=
 # The amount of seconds up to which tcpdump must be run to capture the queries
 tcpdump_time_limit_sec=
 
-# The directory on the target host where tcpdump data will be stored
+# The directory on the target host where tcpdump data will be temporarily
+# stored
+tmp_dir=
+
+# The directory on the host running the script, that will store the tcpdump data
 output_dir=
 
 
@@ -44,6 +48,9 @@ function cleanup() {
 
     # Cleanup any outstanding netcat sockets
     cleanup_nc ${nc_port} ${target_host}
+
+    # Cleanup the temporary directory on the target host
+    ssh ${target_host} "rm -rf ${tmp_dir}"
 
     #TODO: add cleanup code to cleanup any running tcpdump processes
 }
@@ -96,17 +103,20 @@ function wait_for_nc()
 }
 
 function setup_directories() {
-    vlog "Setting up directory ${output_dir} on target host"
+    vlog "Initializing directories"
 
-    # Initialize temp directories to target host
-    ssh -q ${target_host} "mkdir -p ${output_dir}"
+    # Initialize temp directories on target host
+    ssh -q ${target_host} "mkdir -p ${tmp_dir}"
+
+    # Initialize directory that will store the tcpdump data
+    mkdir -p ${output_dir}
 }
 
 function get_tcpdump_from_master() {
 #    set -x
 
     local tcpdump_args="-i ${mysql_interface} -s 65535 -x -n -q -tttt 'port ${mysql_port} and tcp[1] & 7 == 2 and tcp[3] & 7 == 2'"
-    local tcpdump_file="${output_dir}/${tcpdump_filename}"
+    local tcpdump_file="${tmp_dir}/${tcpdump_filename}"
 
     vlog "Starting to capture production queries via tcpdump on the master ${master_host}"
 
@@ -130,7 +140,9 @@ function get_tcpdump_from_master() {
     vlog "Executing ${tcpdump_bin} ${tcpdump_args} on ${master_host}"
     ssh ${master_host} "timeout ${tcpdump_time_limit_sec} ${tcpdump_bin} ${tcpdump_args} 2> /dev/null | ${nc_bin} ${target_host} ${nc_port}"
 
-    vlog "Tcpdump successfully streamed from ${master_host} to ${target_host}:${tcpdump_file}"
+    scp ${target_host}:${tcpdump_file} ${output_dir}/${tcpdump_filename} &> /dev/null
+
+    vlog "Tcpdump successfully streamed from ${master_host} to ${output_dir}/${tcpdump_filename}"
 
 #    set +x
 }
@@ -138,7 +150,7 @@ function get_tcpdump_from_master() {
 # Usage info
 function show_help() {
 cat << EOF
-Usage: ${0##*/} --master-host MASTER_HOST --target-host TARGET_HOST --tcpdump-seconds TCPDUMP_TIME_LIMIT_SEC [options]
+Usage: ${0##*/} --master-host MASTER_HOST --target-host TARGET_HOST --tcpdump-seconds TCPDUMP_TIME_LIMIT_SEC --target-tmpdir TARGET_TMPDIR [options]
 Capture tcpdump output from MASTER_HOST and stream it to TARGET_HOST.
 
 Options:
@@ -150,6 +162,8 @@ Options:
                                              tcpdump
     --target-host TARGET_HOST                the host that will use the tcpdump
                                              captured data
+    --target-tmpdir TARGET_TMPDIR            the directory on TARGET_HOST that
+                                             will be used for temporary files
     --tcpdump-seconds TCPDUMP_TIME_LIMIT_SEC the number of seconds for which
                                              tcpdump will be run on MASTER_HOST
     --output-dir TARGET_OUTPUTDIR            (default= /tmp) the directory on
@@ -164,7 +178,7 @@ function show_help_and_exit() {
 }
 
 # Command line processing
-OPTS=$(getopt -o hm:T:l:o: --long help,master-host:,target-host:,tcpdump-seconds:,output-dir: -n 'mysql_workload_capture.sh' -- "$@")
+OPTS=$(getopt -o hm:T:l:t:o: --long help,master-host:,target-host:,tcpdump-seconds:,target-tmpdir:,output-dir: -n 'mysql_workload_capture.sh' -- "$@")
 [ $? != 0 ] && show_help_and_exit
 
 eval set -- "$OPTS"
@@ -181,6 +195,10 @@ while true; do
                                 ;;
     -l | --tcpdump-seconds )
                                 tcpdump_time_limit_sec="$2";
+                                shift; shift
+                                ;;
+    -t | --target-tmpdir )
+                                tmp_dir="$2";
                                 shift; shift
                                 ;;
     -o | --output-dir )
@@ -212,6 +230,8 @@ for host in ${master_host} ${target_host}; do
 done
 
 [[ -z ${tcpdump_time_limit_sec} ]] && show_help_and_exit >&2
+
+[[ -z ${tmp_dir} ]] && show_help_and_exit >&2
 
 [[ -z ${output_dir} ]] && show_help_and_exit >&2
 
