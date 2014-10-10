@@ -80,8 +80,10 @@ function generate_slowlog_from_tcpdump() {
 
     ptqd_args="--type tcpdump ${tcpdump_file} --output slowlog --no-report --sample ${ptqd_samples_per_query} --filter '(\$event->{fingerprint} =~ m/^select/i) && (\$event->{arg} !~ m/for update/i) && (\$event->{fingerprint} !~ m/users_online/i)'"
 
-    vlog "Executing ${pt_query_digest_bin} ${ptqd_args} on ${target_host}"
-    ssh ${target_host} "${pt_query_digest_bin} ${ptqd_args} > ${slowlog_file} 2> /dev/null"
+    ${pt_query_digest_bin} --type tcpdump ${tcpdump_file} --output slowlog \
+        --no-report --sample ${ptqd_samples_per_query} \
+        --filter '(\$event->{fingerprint} =~ m/^select/i) && (\$event->{arg} !~ m/for update/i) && (\$event->{fingerprint} !~ m/users_online/i)' \
+        > ${slowlog_file} 2> /dev/null
 
     vlog "Slow log for pt-upgrade successfully generated and written to ${slowlog_file}"
 
@@ -94,23 +96,22 @@ function run_upgrade_test() {
     local slowlog_file="${master_tmp_dir}/${ptqd_slowlog_name}"
     local pt_upgrade_report="${target_tmp_dir}/pt_upgrade.log"
 
-    ptupg_args="--run-time=1h --upgrade-table=percona.pt_upgrade --report=hosts,stats --charset=utf8 ${slowlog_file} h=${target_host} h=${compare_host}"
+    vlog "Executing ${pt_upgrade_bin}"
+    ${pt_upgrade_bin} --user ${mysql_username} \
+        --password ${mysql_password} --run-time=1h \
+        --upgrade-table=percona.pt_upgrade --report=hosts,stats --charset=utf8 \
+        ${slowlog_file} h=${target_host} h=${compare_host} > ${pt_upgrade_report}
 
-    vlog "Executing ${pt_upgrade_bin} ${ptupg_args} on ${target_host}"
-    ssh ${target_host} "${pt_upgrade_bin} ${ptupg_args} > ${pt_upgrade_report}"
-
-    scp ${target_host}:${pt_upgrade_report} ${output_dir}/${target_host}-pt_upgrade.log &> /dev/null
-
-    local num_lines=$(wc -l ${output_dir}/${target_host}-pt_upgrade.log | awk '{print $1}')
-    local stats_headline_line_num=$(grep -n "# Stats" ${output_dir}/${target_host}-pt_upgrade.log | awk -F: '{print $1}')
+    local num_lines=$(wc -l ${pt_upgrade_report} | awk '{print $1}')
+    local stats_headline_line_num=$(grep -n "# Stats" ${pt_upgrade_report} | awk -F: '{print $1}')
 
     echo
     echo "###########################################################################"
     echo "Queries summary from running pt-upgrade on ${target_host},${compare_host}"
     echo
-    tail -$(( ${num_lines} - ${stats_headline_line_num} - 2 )) ${output_dir}/${target_host}-pt_upgrade.log
+    tail -$(( ${num_lines} - ${stats_headline_line_num} - 2 )) ${pt_upgrade_report}
     echo "Detailed report is available at:"
-    echo "${output_dir}/${target_host}-pt_upgrade.log"
+    echo "${pt_upgrade_report}"
     echo "###########################################################################"
 
 #    set +x
@@ -119,7 +120,7 @@ function run_upgrade_test() {
 # Usage info
 function show_help() {
 cat << EOF
-Usage: ${0##*/} --master-host MASTER_HOST --compare-host COMPARE_HOST --target-host TARGET_HOST --target-tmpdir TARGET_TMPDIR --output-dir OUTPUT_DIR --mysql_user MYSQL_USER --mysql_password MYSQL_PASSWORD [options]
+Usage: ${0##*/} --master-host MASTER_HOST --compare-host COMPARE_HOST --target-host TARGET_HOST --output-dir OUTPUT_DIR --mysql_user MYSQL_USER --mysql_password MYSQL_PASSWORD [options]
 Run pt-upgrade against MySQL production workload on SLAVE_HOST and TARGET_HOST and compare the query results.
 
 Options:
