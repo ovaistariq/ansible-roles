@@ -101,17 +101,6 @@ function generate_slowlog_from_tcpdump() {
 #    set +x
 }
 
-function get_active_db_list() {
-    # Get the name of the most active database
-    local ignore_db_list="'mysql', 'information_schema', 'performance_schema'"
-
-    sql="SELECT db FROM processlist WHERE db IS NOT NULL AND db NOT in (${ignore_db_list}) GROUP BY db ORDER BY COUNT(*) DESC LIMIT ${num_db_benchmark}"
-
-    db_list=$(ssh ${master_host} "${mysql_bin} information_schema -e \"${sql}\" -NB")
-
-    echo ${db_list}
-}
-
 function get_source_mysql_thd_conc() {
 #    set -x
 
@@ -143,52 +132,29 @@ function run_benchmark() {
 
     ssh ${target_host} "mkdir -p ${master_sessions_dir} ${compare_host_results_dir} ${target_results_dir}"
 
-    # Get list of active DBs
-    vlog "Fetching the list of active DBs from the master ${master_host}"
-    local active_db_list=$(get_active_db_list)
-    if [[ "${active_db_list}" == "" ]]; then
-        echo "No database schemas found to run benchmark against"
-        exit 22
-    fi
-
     vlog "Preparing the session files for pt-log-player"
     ssh ${target_host} "${pt_log_player_bin} --split Thread_id --session-files ${mysql_thd_conc} --base-dir ${master_sessions_dir} ${slowlog_file}"
-
-    vlog "The benchmarks will be run against the schemas:"
-    echo "${active_db_list}"
 
     # Warm up the buffer pool on the compare_host and target hosts
     if [[ "${benchmark_cold_run}" == "0" ]]; then
         for host in ${compare_host} ${target_host}; do
             vlog "Warming up the buffer pool on the host ${host}"
-            for db in ${active_db_list}; do
-                echo "Warming up schema ${db}"
-                pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --only-select --threads ${mysql_thd_conc} --no-results --iterations=3 h=${host}"
-
-                ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
-            done
+            pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --only-select --threads ${mysql_thd_conc} --no-results --iterations=3 h=${host}"
+            ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
         done
     fi
 
     # Run the benchmark against the compare_host
     vlog "Starting to run the benchmark on the host ${compare_host} with a concurrency of ${mysql_thd_conc}"
 
-    for db in ${active_db_list}; do
-        echo "Benchmarking the schema ${db}"
-        pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${compare_host_results_dir} --only-select --threads ${mysql_thd_conc} h=${compare_host}"
-
-        ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
-    done
+    pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${compare_host_results_dir} --only-select --threads ${mysql_thd_conc} h=${compare_host}"
+    ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
 
     # Run the benchmark against the target host
     vlog "Starting to run the benchmark on the target host ${target_host} with a concurrency of ${mysql_thd_conc}"
 
-    for db in ${active_db_list}; do
-        echo "Benchmarking the schema ${db}"
-        pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${target_results_dir} --only-select --threads ${mysql_thd_conc} h=localhost"
-
-        ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
-    done
+    pt_log_player_args="--play ${master_sessions_dir} --set-vars innodb_lock_wait_timeout=1 --base-dir ${target_results_dir} --only-select --threads ${mysql_thd_conc} h=localhost"
+    ssh ${target_host} "${pt_log_player_bin} ${pt_log_player_args}"
 
     # Generating the pt-query-digest reports
     vlog "Generating the pt-query-digest reports on the benchmark runs"
