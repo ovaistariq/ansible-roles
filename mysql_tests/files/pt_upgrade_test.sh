@@ -78,11 +78,9 @@ function generate_slowlog_from_tcpdump() {
     local slowlog_file="${master_tmp_dir}/${ptqd_slowlog_name}"
     local tcpdump_file="${master_tmp_dir}/${tcpdump_filename}"
 
-    ptqd_args="--type tcpdump ${tcpdump_file} --output slowlog --no-report --sample ${ptqd_samples_per_query} --filter '(\$event->{fingerprint} =~ m/^select/i) && (\$event->{arg} !~ m/for update/i) && (\$event->{fingerprint} !~ m/users_online/i)'"
-
     ${pt_query_digest_bin} --type tcpdump ${tcpdump_file} --output slowlog \
         --no-report --sample ${ptqd_samples_per_query} \
-        --filter '(\$event->{fingerprint} =~ m/^select/i) && (\$event->{arg} !~ m/for update/i) && (\$event->{fingerprint} !~ m/users_online/i)' \
+        --filter '($event->{fingerprint} =~ m/^select/i) && ($event->{arg} !~ m/for update/i) && ($event->{fingerprint} !~ m/users_online/i)' \
         > ${slowlog_file} 2> /dev/null
 
     vlog "Slow log for pt-upgrade successfully generated and written to ${slowlog_file}"
