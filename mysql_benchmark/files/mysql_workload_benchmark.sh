@@ -24,7 +24,7 @@ output_dir=
 # Run the benchmark against this many active schemas
 num_db_benchmark=1
 
-# In test only mode only netcat socket testing is performed
+# In test only mode only MySQL access testing is performed
 test_only=
 
 # These should be read-only MySQL users

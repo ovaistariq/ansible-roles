@@ -21,6 +21,9 @@ tmp_dir=
 # The directory where the benchmark report will be stored
 output_dir=
 
+# In test only mode only MySQL access testing is performed
+test_only=
+
 # These should be read-only MySQL users
 mysql_username=
 mysql_password=
