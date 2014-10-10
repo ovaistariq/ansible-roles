@@ -1,28 +1,18 @@
 #!/bin/bash -u
 
 # Configuration options
-script_root=$(dirname $(readlink -f $0))
-current_date=$(date +%Y_%m_%d_%H_%M_%S)
-
 # The prod master that will be used to capture the prod workload
 master_host=
 
-# The host that we want to benchmark to guage performance
+# The host that will use the tcpdump data
 target_host=
 
 # The amount of seconds up to which tcpdump must be run to capture the queries
-tcpdump_time_limit_sec=300
+tcpdump_time_limit_sec=
 
 # The directory on the target host where tcpdump data will be stored
 output_dir=
 
-# In test only mode only netcat socket testing is performed
-test_only=
-
-# Should the benchmark run be interactive. If its interactive, then each 
-# important step will be preceeded with a prompt. By default the benchmark
-# run is non-interactive
-interactive=0
 
 mysql_interface=eth0
 mysql_port=3306
@@ -112,46 +102,6 @@ function setup_directories() {
     ssh -q ${target_host} "mkdir -p ${output_dir}"
 }
 
-function test_remote_sockets() {
-#    set -x
-
-    vlog "Testing remote communication: ${master_host} <-> ${target_host}"
-
-    wait_for_nc ${nc_port} ${target_host} &
-
-    # Create a test socket to test to see if we can create and send to sockets
-    ssh ${target_host} "nohup bash -c \"(${nc_bin} -dl ${nc_port} > /tmp/mysql_workload_benchmark_nc_hello.txt) &\" > /dev/null 2>&1"
-
-    wait %% # join wait_for_nc thread
-
-    # check if nc is running, if not then it errored out
-    local nc_pid=$(get_nc_pid ${nc_port} ${target_host})
-    (( $(check_pid ${nc_pid} ${target_host} ) != 0 )) && show_error_n_exit "Could not create a socket on ${target_host}"
-
-    ssh ${master_host} "echo 'hello world' | ${nc_bin} ${target_host} ${nc_port}"
-    if [[ $? != 0 ]]; then
-        cleanup_nc ${nc_port} ${target_host}
-        show_error_n_exit "Could not connect to remote socket on ${target_host} from ${master_host}"
-    fi
-
-    vlog "${master_host} <-> ${target_host} can communicate on ${nc_port}"
-
-#    set +x
-
-    return $?
-}
-
-function do_test() {
-#    set -x
-    local ret_code=
-
-    # Test for remote sockets via netcat
-    test_remote_sockets
-    ret_code=$?
-    (( ${ret_code} != 0 )) && exit ret_code
-#    set +x
-}
-
 function get_tcpdump_from_master() {
 #    set -x
 
@@ -198,8 +148,8 @@ Options:
                                              production traffic that will be
                                              used to capture queries via
                                              tcpdump
-    --target-host TARGET_HOST                the host that has to be
-                                             benchmarked
+    --target-host TARGET_HOST                the host that will use the tcpdump
+                                             captured data
     --tcpdump-seconds TCPDUMP_TIME_LIMIT_SEC (default= 300s) the number of
                                              seconds for which tcpdump will be
                                              run on SOURCE_HOST
@@ -264,25 +214,27 @@ done
 
 [[ -z ${tcpdump_time_limit_sec} ]] && show_help_and_exit >&2
 
+[[ -z ${output_dir} ]] && show_help_and_exit >&2
 
 # Setup directory names
-output_dir="${output_dir}/master-${master_host}"
+output_dir="${output_dir}/${master_host}"
 
 
 # Test that all tools are available
-for tool_bin in ${tcpdump_bin} ${nc_bin}; do
+if (( $(ssh ${master_host} "which $tcpdump_bin" &> /dev/null; echo $?) != 0 )); then
+    echo "Can't find $tcpdump_bin on ${master_host}"
+    exit 22 # OS error code  22:  Invalid argument
+fi
+
+for tool_bin in ${nc_bin}; do
     for host in ${master_host} ${target_host}; do
         if (( $(ssh ${host} "which $tool_bin" &> /dev/null; echo $?) != 0 ))
         then
-            echo "Can't find $tool_bin in PATH on ${host}"
+            echo "Can't find $tool_bin on ${host}"
             exit 22 # OS error code  22:  Invalid argument
         fi
     done
 done
-
-# Test if nc based sockets work to/from source and target hosts
-# and test for MySQL connectivity.
-[[ ! -z ${test_only} ]] && do_test
 
 
 # Do the actual stuff
