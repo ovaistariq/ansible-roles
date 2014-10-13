@@ -50,3 +50,11 @@
     --mysql-user {{ mysql_ro_username }}
     --mysql-password {{ mysql_ro_password }}
   when: run_pt_upgrade_test == "yes"
+
+- name: cleanup the files created by the tests
+  local_action: >
+    script cleanup.sh
+    --master-host {{ mysql_master_host }}
+    --compare-host {{ mysql_compare_host }}
+    --target-host {{ hostvars[inventory_hostname]['ansible_hostname'] }}
+    --output-dir {{ output_dir }}/{{ current_datetime.stdout }}
