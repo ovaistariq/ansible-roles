@@ -13,6 +13,9 @@ target_host=
 # The directory where the benchmark related data will be stored
 output_dir=
 
+# Run the benchmark against this many active schemas
+num_db_benchmark=1
+
 # Read-only MySQL user credentials
 mysql_username=
 mysql_password=
@@ -101,6 +104,20 @@ function generate_slowlog_from_tcpdump() {
 #    set +x
 }
 
+function get_active_db_list() {
+    # Get the name of the most active database
+    local ignore_db_list="'mysql', 'information_schema', 'performance_schema'"
+    local mysql_args=
+
+    sql="SELECT db FROM processlist WHERE db IS NOT NULL AND db NOT in (${ignore_db_list}) GROUP BY db ORDER BY COUNT(*) DESC LIMIT ${num_db_benchmark}"
+    mysql_args="--host=${master_host} --user=${mysql_username} --password=${mysql_password}"
+
+    db_list=$(${mysql_bin} --host=${master_host} --user=${mysql_username} \
+                --password=${mysql_password} information_schema -e "${sql}" -NB)
+
+    echo ${db_list}
+}
+
 function get_source_mysql_thd_conc() {
 #    set -x
 
@@ -132,6 +149,15 @@ function run_benchmark() {
 
     mkdir -p ${master_sessions_dir} ${compare_host_results_dir} ${target_results_dir}
 
+    # Get list of active DBs
+    vlog "Fetching the list of active DBs from the master ${master_host}"
+    local active_db_list=$(get_active_db_list)
+    if [[ "${active_db_list}" == "" ]]
+    then
+        echo "No database schemas found to run benchmark against"
+        exit 22
+    fi
+
     vlog "Preparing the session files for pt-log-player"
     ${pt_log_player_bin} --split Thread_id --session-files ${mysql_thd_conc} \
         --base-dir ${master_sessions_dir} ${slowlog_file} \
@@ -142,33 +168,44 @@ function run_benchmark() {
     if [[ "${benchmark_cold_run}" == "0" ]]; then
         for host in ${compare_host} ${target_host}; do
             vlog "Warming up the buffer pool on the host ${host}"
-            ${pt_log_player_bin} --user ${mysql_username} \
-                --password ${mysql_password} --play ${master_sessions_dir} \
-                --set-vars innodb_lock_wait_timeout=1 --only-select \
-                --threads ${mysql_thd_conc} --no-results --iterations=3 \
-                h=${host} &> /dev/null
+            for db in ${active_db_list}; do
+                echo "Warming up schema ${db}"
+                ${pt_log_player_bin} --user ${mysql_username} \
+                    --password ${mysql_password} --play ${master_sessions_dir} \
+                    --set-vars innodb_lock_wait_timeout=1 --only-select \
+                    --threads ${mysql_thd_conc} --no-results --iterations=3 \
+                    h=${host},D=${db} &> /dev/null
+                done
         done
     fi
 
     # Run the benchmark against the compare_host
     vlog "Starting to run the benchmark on the host ${compare_host} with a concurrency of ${mysql_thd_conc}"
-    ${pt_log_player_bin} --user ${mysql_username} \
-        --password ${mysql_password} --play ${master_sessions_dir} \
-        --set-vars innodb_lock_wait_timeout=1 \
-        --base-dir ${compare_host_results_dir} --only-select \
-        --threads ${mysql_thd_conc} h=${compare_host} \
-        > ${compare_host_tmp_dir}/pt_log_player.log \
-        2> ${compare_host_tmp_dir}/pt_log_player.err
+
+    for db in ${active_db_list}; do
+        echo "Benchmarking the schema ${db}"
+        ${pt_log_player_bin} --user ${mysql_username} \
+            --password ${mysql_password} --play ${master_sessions_dir} \
+            --set-vars innodb_lock_wait_timeout=1 \
+            --base-dir ${compare_host_results_dir} --only-select \
+            --threads ${mysql_thd_conc} h=${compare_host},D=${db} \
+            > ${compare_host_tmp_dir}/pt_log_player.log \
+            2> ${compare_host_tmp_dir}/pt_log_player.err
+    done
 
     # Run the benchmark against the target host
     vlog "Starting to run the benchmark on the target host ${target_host} with a concurrency of ${mysql_thd_conc}"
-    ${pt_log_player_bin} --user ${mysql_username} \
-        --password ${mysql_password} --play ${master_sessions_dir} \
-        --set-vars innodb_lock_wait_timeout=1 \
-        --base-dir ${target_results_dir} --only-select \
-        --threads ${mysql_thd_conc} h=${target_host} \
-        > ${target_tmp_dir}/pt_log_player.log \
-        2> ${target_tmp_dir}/pt_log_player.err
+
+    for db in ${active_db_list}; do
+        echo "Benchmarking the schema ${db}"
+        ${pt_log_player_bin} --user ${mysql_username} \
+            --password ${mysql_password} --play ${master_sessions_dir} \
+            --set-vars innodb_lock_wait_timeout=1 \
+            --base-dir ${target_results_dir} --only-select \
+            --threads ${mysql_thd_conc} h=${target_host},D=${db} \
+            > ${target_tmp_dir}/pt_log_player.log \
+            2> ${target_tmp_dir}/pt_log_player.err
+    done
 
     # Generating the pt-query-digest reports
     vlog "Generating the pt-query-digest reports on the benchmark runs"
