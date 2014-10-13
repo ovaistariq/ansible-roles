@@ -36,4 +36,6 @@
     - .pt-kill.conf
     - .pt-log-player.conf
     - .pt-upgrade.conf
+    - .pt-heartbeat.conf
+    - .pt-slave-delay.conf
 
