@@ -8,3 +8,4 @@ output_dir: "/var/lib/mysql_tests/sjc1ppod09"
 # these variables control whats tests should be run
 run_workload_replay_test: "yes"
 run_pt_upgrade_test: "yes"
+do_cleanup_after_tests: "yes"
