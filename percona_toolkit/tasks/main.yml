@@ -9,7 +9,7 @@
 
 - name: Check for unsupported target operating system
   fail:
-  msg: "The operating system of the target machine ({{ inventory_hostname }}) is not currently supported."
+    msg: "The operating system of the target machine ({{ inventory_hostname }}) is not currently supported."
   when: mysql_supported_os is not defined
 
 - name: ensure Percona repository is installed
