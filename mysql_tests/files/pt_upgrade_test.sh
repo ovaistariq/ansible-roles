@@ -65,6 +65,15 @@ function check_pid() {
 #    set +x
 }
 
+function test_mysql_access() {
+#    set -x
+    local host=$1
+    [[ "${host}" != '' ]] && ${mysqladmin_bin} --host=${host} --user=${mysql_username} --password=${mysql_password} ping >/dev/null 2>&1
+
+    echo $?
+#    set +x
+}
+
 function setup_directories() {
     vlog "Setting up directory ${output_dir} ${target_tmp_dir} ${compare_host_tmp_dir} ${master_tmp_dir}"
     mkdir -p ${output_dir} ${target_tmp_dir} ${compare_host_tmp_dir} ${master_tmp_dir}
@@ -229,6 +238,13 @@ for tool_bin in ${pt_query_digest_bin} ${pt_upgrade_bin}; do
     fi
 done
 
+# Test that MySQL credentials are correct
+for host in ${master_host} ${compare_host} ${target_host}; do
+    if (( $(test_mysql_access ${host}) != 0 )); then
+        echo "Could not connect to MySQL on ${host}"
+        exit 2003
+    fi
+done
 
 # Do the actual stuff
 trap cleanup HUP PIPE INT TERM
