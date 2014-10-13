@@ -46,20 +46,27 @@
     script mysql_workload_capture.sh
     --master-host {{ mysql_master_host }}
     --target-host {{ hostvars[inventory_hostname]['ansible_hostname'] }}
-    --tcpdump-seconds {{ benchmark_seconds }} --output-dir {{ target_tmpdir }}/{{ current_datetime.stdout }}
+    --tcpdump-seconds {{ benchmark_seconds }}
+    --target-tmpdir {{ target_tmpdir }}/{{ current_datetime.stdout }}
+    --output-dir {{ target_tmpdir }}/{{ current_datetime.stdout }}
 
 - name: replay MySQL production workload to gauge MySQL performance
   local_action: >
     script mysql_workload_replay.sh
-    --master-host {{ mysql_master_host }} --compare-host {{ mysql_compare_host }}
+    --master-host {{ mysql_master_host }}
+    --compare-host {{ mysql_compare_host }}
     --target-host {{ hostvars[inventory_hostname]['ansible_hostname'] }}
-    --target-tmpdir {{ target_tmpdir }}/{{ current_datetime.stdout }}
-    --output-dir {{ output_dir }}/{{ current_datetime.stdout }} --cold-run
+    --output-dir {{ output_dir }}/{{ current_datetime.stdout }}
+    --mysql-user {{ mysql_ro_username }}
+    --mysql-password {{ mysql_ro_password }}
+    --cold-run
 
 - name: run pt-upgrade tests
   local_action: >
     script pt_upgrade_test.sh
-    --master-host {{ mysql_master_host }} --compare-host {{ mysql_compare_host }}
+    --master-host {{ mysql_master_host }}
+    --compare-host {{ mysql_compare_host }}
     --target-host {{ hostvars[inventory_hostname]['ansible_hostname'] }}
-    --target-tmpdir {{ target_tmpdir }}/{{ current_datetime.stdout }}
     --output-dir {{ output_dir }}/{{ current_datetime.stdout }}
+    --mysql-user {{ mysql_ro_username }}
+    --mysql-password {{ mysql_ro_password }}
