@@ -104,10 +104,10 @@ function generate_slowlog_from_tcpdump() {
 function get_source_mysql_thd_conc() {
 #    set -x
 
-    local mysqladmin_args="--host=${master_host} --user=${mysql_username} --password=${mysql_password} -i 1 -c 30 extended-status"
-    local awk_args='BEGIN {cnt=0; sum=0;} /Threads_running/ {cnt=cnt+1; sum=sum+$4} END {printf "%d\n", (sum/cnt)}'
-
-    local thd_concurrency=$(${mysqladmin_bin} ${mysqladmin_args} | awk '${awk_args}')
+    local thd_concurrency=$(${mysqladmin_bin} --host=${master_host} \
+                            --user=${mysql_username} --password=${mysql_password} \
+                            -i 1 -c 30 extended-status \
+                            | awk 'BEGIN {cnt=0; sum=0;} /Threads_running/ {cnt=cnt+1; sum=sum+$4} END {printf "%d\n", (sum/cnt)}')
     echo ${thd_concurrency}
 
 #    set +x
