@@ -38,6 +38,7 @@
     --mysql-user {{ mysql_ro_username }}
     --mysql-password {{ mysql_ro_password }}
     --cold-run
+  when: run_workload_replay_test == "yes"
 
 - name: run pt-upgrade tests
   local_action: >
@@ -48,3 +49,4 @@
     --output-dir {{ output_dir }}/{{ current_datetime.stdout }}
     --mysql-user {{ mysql_ro_username }}
     --mysql-password {{ mysql_ro_password }}
+  when: run_pt_upgrade_test == "yes"
