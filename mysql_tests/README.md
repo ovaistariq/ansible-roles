@@ -16,8 +16,6 @@ Role Variables
 These variables have to be defined in the playbook, since there are no defaults defined for them
 * `mysql_master_host` The production master from which workload will be captured using tcpdump
 * `mysql_compare_host` The production slave where workload will be replayed to set a baseline
-* `mysql_socket` The unix domain socket that MySQL will use
-* `mysql_root_password` The MySQL root password
 * `mysql_ro_username` The MySQL user with read-only privileges that will be used by the test scripts 
 * `mysql_ro_password` The password of the MySQL user with read-only privileges
 
@@ -41,8 +39,6 @@ Including an example of how to use this role with variables passed in as paramet
       roles:
          - { role: mysql_tests, mysql_master_host: "hostname", 
                 mysql_compare_host: "hostname", 
-                mysql_socket: "/data/mysql_data/mysql.sock",
-                mysql_root_password: "changeme",
                 mysql_ro_username: "some_username",
                 mysql_ro_password: "some_password" }
 
