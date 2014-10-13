@@ -72,7 +72,7 @@ innodb-log-files-in-group      = 2
 innodb-log-file-size           = 2G
 innodb-flush-log-at-trx-commit = 2
 innodb-file-per-table          = 1
-innodb-buffer-pool-size        = {{ ((memory_mb|float * 0.84) / 1024)|round|int }}G
+innodb-buffer-pool-size        = {{ ((ansible_memtotal_mb|float * 0.84) / 1024)|round|int }}G
 
 {% if mysql_major_version and mysql_major_version == "5.6" %}
 innodb-buffer-pool-dump-at-shutdown=1
