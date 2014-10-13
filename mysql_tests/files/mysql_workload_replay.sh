@@ -69,6 +69,15 @@ function check_pid() {
 #    set +x
 }
 
+function test_mysql_access() {
+#    set -x
+    local host=$1
+    [[ "${host}" != '' ]] && ${mysqladmin_bin} --host=${host} --user=${mysql_username} --password=${mysql_password} ping >/dev/null 2>&1
+
+    echo $?
+#    set +x
+}
+
 function setup_directories() {
     vlog "Setting up directory ${output_dir} ${target_tmp_dir} ${compare_host_tmp_dir} ${master_tmp_dir}"
     mkdir -p ${output_dir} ${target_tmp_dir} ${compare_host_tmp_dir} ${master_tmp_dir}
@@ -95,10 +104,10 @@ function generate_slowlog_from_tcpdump() {
 function get_source_mysql_thd_conc() {
 #    set -x
 
-    local mysqladmin_args="-i 1 -c 30 extended-status"
+    local mysqladmin_args="--host=${master_host} --user=${mysql_username} --password=${mysql_password} -i 1 -c 30 extended-status"
     local awk_args='BEGIN {cnt=0; sum=0;} /Threads_running/ {cnt=cnt+1; sum=sum+$4} END {printf "%d\n", (sum/cnt)}'
 
-    local thd_concurrency=$(ssh ${master_host} "${mysqladmin_bin} ${mysqladmin_args} | awk '${awk_args}'")
+    local thd_concurrency=$(${mysqladmin_bin} ${mysqladmin_args} | awk '${awk_args}')
     echo ${thd_concurrency}
 
 #    set +x
@@ -301,6 +310,14 @@ for tool_bin in ${pt_query_digest_bin} ${pt_log_player_bin}; do
     if (( $(which $tool_bin &> /dev/null; echo $?) != 0 )); then
         echo "Can't find $tool_bin"
         exit 22 # OS error code  22:  Invalid argument
+    fi
+done
+
+# Test that MySQL credentials are correct
+for host in ${master_host} ${compare_host} ${target_host}; do
+    if (( $(test_mysql_access ${host}) != 0 )); then
+        echo "Could not connect to MySQL on ${host}"
+        exit 2003
     fi
 done
 

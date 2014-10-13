@@ -1,5 +1,5 @@
 ---
-# tasks file for mysql_benchmark
+# tasks file for mysql_tests
 - name: include os specific variables
   include_vars: "{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml"
 
@@ -12,30 +12,8 @@
     msg: "The operating system of the target machine ({{ inventory_hostname }}) is not currently supported."
   when: mysql_supported_os is not defined
 
-- name: include Percona specific tasks
-  include: percona.yml
-
-- name: install required tools on target host
-  yum: name={{ item }} state=installed
-  with_items:
-    - nc
-    - tcpdump
-  register: tools_install
-
-- name: install required tools on master host
-  yum: name={{ item }} state=installed
-  with_items:
-    - nc
-    - tcpdump
-  delegate_to: "{{ mysql_master_host }}"
-  register: tools_install_master
-
-- name: configure the client password file
-  template: src=client_my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
-
-- name: configure the client password file on master host
-  template: src=client_my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
-  delegate_to: "{{ mysql_master_host }}"
+- name: install required tools
+  include: tools_install.yml
 
 - name: fetch the current datetime
   shell: date '+%Y_%m_%d_%H_%M_%S'

@@ -23,8 +23,8 @@ These variables have to be defined in the playbook, since there are no defaults 
 
 ## Standard
 * `benchmark_seconds` The number of seconds to capture the production workload for, defaults to 1800
-* `target_tmpdir` The directory on the target server to store temporary files needed by benchmark, defaults to /tmp
-* `output_dir` The directory to store the benchmark results to, defaults to /tmp
+* `target_tmpdir` The directory on the target server to store temporary files needed by benchmark, defaults to /tmp/mysql_tests
+* `output_dir` The directory to store the benchmark results to, defaults to /var/lib/mysql_tests/sjc1ppod09
 
 Dependencies
 ------------

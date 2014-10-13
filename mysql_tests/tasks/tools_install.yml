@@ -1,0 +1,15 @@
+---
+# tasks file for installing tools needed to run the tests
+- name: install required tools on target host
+  yum: name={{ item }} state=installed
+  with_items:
+    - nc
+  register: tools_install
+
+- name: install required tools on master host
+  yum: name={{ item }} state=installed
+  with_items:
+    - nc
+    - tcpdump
+  delegate_to: "{{ mysql_master_host }}"
+  register: tools_install_master

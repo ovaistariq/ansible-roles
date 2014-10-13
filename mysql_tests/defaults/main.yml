@@ -2,6 +2,6 @@
 # defaults file for mysql_benchmark
 
 benchmark_seconds: 1800
-target_tmpdir: "/tmp"
-output_dir: "/tmp"
+target_tmpdir: "/tmp/mysql_tests"
+output_dir: "/var/lib/mysql_tests/sjc1ppod09"
 
