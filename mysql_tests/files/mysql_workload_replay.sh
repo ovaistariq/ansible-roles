@@ -280,11 +280,6 @@ done
 
 [[ -z ${target_host} ]] && show_help_and_exit >&2
 
-for host in ${master_host} ${compare_host} ${target_host}; do
-    ssh -q ${host} "exit"
-    (( $? != 0 )) && show_error_n_exit "Could not SSH into ${host}"
-done
-
 [[ -z ${output_dir} ]] && show_help_and_exit >&2
 
 [[ -z ${mysql_username} ]] && show_help_and_exit >&2
