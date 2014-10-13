@@ -102,12 +102,14 @@ function run_upgrade_test() {
 
     local slowlog_file="${master_tmp_dir}/${ptqd_slowlog_name}"
     local pt_upgrade_report="${target_tmp_dir}/pt_upgrade.log"
+    local pt_upgrade_errlog="${target_tmp_dir}/pt_upgrade.err"
 
     vlog "Executing ${pt_upgrade_bin}"
     ${pt_upgrade_bin} --user ${mysql_username} \
         --password ${mysql_password} --run-time=1h \
         --upgrade-table=percona.pt_upgrade --report=hosts,stats --charset=utf8 \
-        ${slowlog_file} h=${target_host} h=${compare_host} > ${pt_upgrade_report}
+        ${slowlog_file} h=${target_host} h=${compare_host} \
+        > ${pt_upgrade_report} 2> ${pt_upgrade_errlog}
 
     local num_lines=$(wc -l ${pt_upgrade_report} | awk '{print $1}')
     local stats_headline_line_num=$(grep -n "# Stats" ${pt_upgrade_report} | awk -F: '{print $1}')

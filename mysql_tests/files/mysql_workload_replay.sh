@@ -133,7 +133,10 @@ function run_benchmark() {
     mkdir -p ${master_sessions_dir} ${compare_host_results_dir} ${target_results_dir}
 
     vlog "Preparing the session files for pt-log-player"
-    ${pt_log_player_bin} --split Thread_id --session-files ${mysql_thd_conc} --base-dir ${master_sessions_dir} ${slowlog_file}
+    ${pt_log_player_bin} --split Thread_id --session-files ${mysql_thd_conc} \
+        --base-dir ${master_sessions_dir} ${slowlog_file} \
+        > ${master_tmp_dir}/pt_log_player.log \
+        2> ${master_tmp_dir}/pt_log_player.err
 
     # Warm up the buffer pool on the compare_host and target hosts
     if [[ "${benchmark_cold_run}" == "0" ]]; then
@@ -143,7 +146,7 @@ function run_benchmark() {
                 --password ${mysql_password} --play ${master_sessions_dir} \
                 --set-vars innodb_lock_wait_timeout=1 --only-select \
                 --threads ${mysql_thd_conc} --no-results --iterations=3 \
-                h=${host} 2> /dev/null
+                h=${host} &> /dev/null
         done
     fi
 
@@ -153,7 +156,9 @@ function run_benchmark() {
         --password ${mysql_password} --play ${master_sessions_dir} \
         --set-vars innodb_lock_wait_timeout=1 \
         --base-dir ${compare_host_results_dir} --only-select \
-        --threads ${mysql_thd_conc} h=${compare_host} 2> /dev/null
+        --threads ${mysql_thd_conc} h=${compare_host} \
+        > ${compare_host_tmp_dir}/pt_log_player.log \
+        2> ${compare_host_tmp_dir}/pt_log_player.err
 
     # Run the benchmark against the target host
     vlog "Starting to run the benchmark on the target host ${target_host} with a concurrency of ${mysql_thd_conc}"
@@ -161,7 +166,9 @@ function run_benchmark() {
         --password ${mysql_password} --play ${master_sessions_dir} \
         --set-vars innodb_lock_wait_timeout=1 \
         --base-dir ${target_results_dir} --only-select \
-        --threads ${mysql_thd_conc} h=${target_host} 2> /dev/null
+        --threads ${mysql_thd_conc} h=${target_host} \
+        > ${target_tmp_dir}/pt_log_player.log \
+        2> ${target_tmp_dir}/pt_log_player.err
 
     # Generating the pt-query-digest reports
     vlog "Generating the pt-query-digest reports on the benchmark runs"
