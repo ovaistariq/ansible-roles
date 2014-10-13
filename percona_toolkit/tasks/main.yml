@@ -1,0 +1,39 @@
+---
+# tasks file for Percona toolkit
+- name: include os specific variables
+  include_vars: "{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml"
+
+- name: include RedHat specific tasks
+  include: RedHat.yml
+  when: ansible_os_family == 'RedHat'
+
+- name: Check for unsupported target operating system
+  fail:
+  msg: "The operating system of the target machine ({{ inventory_hostname }}) is not currently supported."
+  when: mysql_supported_os is not defined
+
+- name: ensure Percona repository is installed
+  shell: rpm -ivh --force http://www.percona.com/downloads/percona-release/percona-release-0.0-1.x86_64.rpm
+
+- name: ensure Percona toolkit is installed
+  yum: name=percona-toolkit state=latest
+
+- name: install pt-log-player
+  copy: src=pt-log-player dest=/usr/bin/pt-log-player owner=root group=root mode=0755
+
+- name: setup configuration files for the read-write tools
+  template: src=pt-read-write.conf.j2 dest=/root/{{ item }} owner=root group=root mode=0600
+  with_items:
+    - .pt-table-sync.conf
+    - .pt-online-schema-change.conf
+
+- name: setup configuration files for the read-only tools
+  template: src=pt-read-only.conf.j2 dest=/root/{{ item }} owner=root group=root mode=0600
+  with_items:
+    - .pt-table-checksum.conf
+    - .pt-slave-find.conf
+    - .pt-mysql-summary.conf
+    - .pt-kill.conf
+    - .pt-log-player.conf
+    - .pt-upgrade.conf
+
