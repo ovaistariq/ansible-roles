@@ -1,8 +1,6 @@
-mysql_tests
-===============
-This is a role to test a MySQL server using production workload. The production workload is captured on the master and replayed on a production slave as a baseline. 
-The baseline is then compared to how replaying the same workload works on the target server that is being benchmarked. 
-Together with that pt-upgrade is used to run the queries on the target server and on a production slave and then result-sets are compared for any differences.
+mysql_replication_slave
+=======================
+This is a role to setup a new MySQL slave using dump and reload.
 
 Requirements
 ------------
@@ -14,25 +12,23 @@ Role Variables
 
 ## Mandatory
 These variables have to be defined in the playbook, since there are no defaults defined for them
-* `mysql_master_host` The production master from which workload will be captured using tcpdump
-* `mysql_compare_host` The production slave where workload will be replayed to set a baseline
-* `mysql_ro_username` The MySQL user with read-only privileges that will be used by the test scripts 
-* `mysql_ro_password` The password of the MySQL user with read-only privileges
+* `backup_source_host` The production host which will be used as the source of the dump
+* `mysql_username` The username of the MySQL user that will be used for the dump and reload
+* `mysql_password` The password of the MySQL user used for dump and reload 
+* `mysql_repl_username` The username of the MySQL user that will be used for replication
+* `mysql_repl_password` The password of the MySQL replication user
 
 ## Standard
-* `benchmark_seconds` The number of seconds to capture the production workload for, defaults to 1800
-* `target_tmpdir` The directory on the target server to store temporary files needed by benchmark, defaults to /tmp/mysql_tests
-* `output_dir` The directory to store the benchmark results to, defaults to /var/lib/mysql_tests/sjc1ppod09
-* `run_workload_replay_test` Should the "workload replay" test be run, defaults to 'yes'
-* `run_pt_upgrade_test` Should the "pt-upgrade" test be run, defaults to 'yes'
-* `do_cleanup_after_tests` Should the tcpdump and slow log files created during the tests run be cleaned up, defaults to 'yes'
+* `output_dir` The directory to store the dump and reload related data, defaults to /data/mysql_data
+* `backup_source_is_master` Should the backup_source_host be setup as the master, defaults to 'no'
+* `mysql_datadir` Defaults to /data/mysql_data
+* `mysql_logdir` Defaults to /data/mysql_logs
+* `mysql_tmpdir` Defaults to /data/mysql_data/tmp
 
 Dependencies
 ------------
 
-* The role depends on the {{ mysql_master_host }}, {{ mysql_compare_host }} being accessible via ssh from the host that will use the role.
-* The role also depends on port 7778 being open between {{ mysql_master_host }} and the host which is supposed to be benchmarked.
-* The role depends on the percona_toolkit role.
+* The role depends on the {{ backup_source_host }} being accessible via ssh from the host that will use the role.
 
 Example Playbook
 -------------------------
@@ -41,10 +37,11 @@ Including an example of how to use this role with variables passed in as paramet
 
     - hosts: servers
       roles:
-         - { role: mysql_tests, mysql_master_host: "hostname", 
-                mysql_compare_host: "hostname", 
-                mysql_ro_username: "some_username",
-                mysql_ro_password: "some_password" }
+         - { role: mysql_replication_slave, backup_source_host: "hostname", 
+                mysql_username: "some_username",
+                mysql_password: "some_password",
+                mysql_repl_username: "some_username",
+                mysql_repl_password: "some_password" }
 
 Author Information
 ------------------
