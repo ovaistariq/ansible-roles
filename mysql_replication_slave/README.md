@@ -19,7 +19,7 @@ These variables have to be defined in the playbook, since there are no defaults 
 * `mysql_repl_password` The password of the MySQL replication user
 
 ## Standard
-* `output_dir` The directory to store the dump and reload related data, defaults to /data/mysql_data
+* `output_dir` The directory to store the dump and reload related data, defaults to /data/mysql_data/mysql_replication_slave
 * `backup_source_is_master` Should the backup_source_host be setup as the master, defaults to 'no'
 * `mysql_datadir` Defaults to /data/mysql_data
 * `mysql_logdir` Defaults to /data/mysql_logs

@@ -3,7 +3,7 @@
 
 # The directory where dump and reload related data will be stored
 # on the slave to be
-output_dir: "/data/mysql_data"
+output_dir: "/data/mysql_data/mysql_replication_slave"
 
 # this variable controls if the backup source server is to be used
 # as the replication master
