@@ -76,7 +76,7 @@ function test_mysql_access() {
 #    set -x
 
     local mysqladmin_args="--host=${backup_source_host} --user=${mysql_username} --password=${mysql_password}"
-    local is_mysqld_alive = $(ssh ${target_host} "${mysqladmin_bin} ${mysqladmin_args} ping" 2> /dev/null)
+    local is_mysqld_alive=$(ssh ${target_host} "${mysqladmin_bin} ${mysqladmin_args} ping" 2> /dev/null)
 
     if [[ "${is_mysqld_alive}" != "mysqld is alive" ]]; then
         echo 2003 # MySQL error code for connection error
@@ -119,7 +119,7 @@ function dump_mysql_data() {
 function create_user_to_reload_dump() {
 #    set -x
 
-    local mysql_args="--user=${mysql_username} --password=${mysql_password}"
+    local mysql_args="--user=root --password=''"
 
     vlog "Creating user ${mysql_username}@localhost on ${target_host} to reload the dump"
     ssh ${target_host} "${mysql_bin} ${mysql_args} -e \"GRANT ALL PRIVILEGES ON *.* TO ${mysql_username}@'localhost' IDENTIFIED BY '${mysql_password}'\""
