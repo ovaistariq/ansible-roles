@@ -10,6 +10,7 @@ output_dir: "/data/mysql_data/mysql_replication_slave"
 backup_source_is_master: "no"
 
 # Various MySQL options
+mysql_user: "mysql"
 mysql_datadir: "/data/mysql_data"
 mysql_logdir: "/data/mysql_logs"
 mysql_tmpdir: "/data/mysql_data/tmp"

@@ -24,6 +24,7 @@ These variables have to be defined in the playbook, since there are no defaults 
 * `mysql_datadir` Defaults to /data/mysql_data
 * `mysql_logdir` Defaults to /data/mysql_logs
 * `mysql_tmpdir` Defaults to /data/mysql_data/tmp
+* `mysql_user` Defaults to mysql
 
 Dependencies
 ------------
