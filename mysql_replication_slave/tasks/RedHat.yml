@@ -1,0 +1,25 @@
+---
+- name: >
+    RedHat | set_fact
+      mysql_supported_os: True
+  set_fact:
+    mysql_supported_os: True
+
+- name: RedHat | stop mysql service
+  service: name=mysql state=stopped
+
+- name: RedHat | empty the directories
+  shell: rm -rf {{ mysql_datadir }}/* {{ mysql_logdir }}/* {{ mysql_tmpdir }}/*
+
+- name: RedHat | setup directory permissions
+  file: path={{ item }} state=directory owner=mysql group=mysql mode=0755
+  with_items:
+    - "{{ mysql_datadir }}"
+    - "{{ mysql_logdir }}"
+    - "{{ mysql_tmpdir }}"
+
+- name: RedHat | install mysql system databases
+  command: mysql_install_db --user={{ mysql_user }} --datadir={{ mysql_datadir }}
+
+- name: RedHat | start mysql service
+  service: name=mysql state=started

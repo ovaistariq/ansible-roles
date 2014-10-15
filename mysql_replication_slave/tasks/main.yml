@@ -1,0 +1,45 @@
+---
+# tasks file for mysql_replication_slave
+- name: include os specific variables
+  include_vars: "{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml"
+
+- name: include RedHat specific tasks
+  include: RedHat.yml
+  when: ansible_os_family == 'RedHat'
+
+- name: Check for unsupported target operating system
+  fail:
+    msg: "The operating system of the target machine ({{ inventory_hostname }}) is not currently supported."
+  when: mysql_supported_os is not defined
+
+- name: install required tools on target host
+  copy: src={{ item }} dest=/usr/bin/{{ item }} owner=root group=root mode=0755
+  with_items:
+    - mydumper
+    - myloader
+  register: tools_install
+
+- name: clone slave using dump and reload and set up as child of backup_source_host in replication hierarchy
+  local_action: >
+    script clone_slave_dump_reload.sh
+    --backup-source-host {{ backup_source_host }}
+    --target-host {{ hostvars[inventory_hostname]['ansible_hostname'] }}
+    --output-dir {{ output_dir }}/{{ current_datetime.stdout }}
+    --mysql-user {{ mysql_username }}
+    --mysql-password {{ mysql_password }}
+    --mysql-repl-user {{ mysql_repl_username }}
+    --mysql-repl-password {{ mysql_repl_password }}
+    --backup-source-is-master
+  when: backup_source_is_master == "yes"
+
+- name: clone slave using dump and reload and set up as sibling of backup_source_host in replication hierarchy
+  local_action: >
+    script clone_slave_dump_reload.sh
+    --backup-source-host {{ backup_source_host }}
+    --target-host {{ hostvars[inventory_hostname]['ansible_hostname'] }}
+    --output-dir {{ output_dir }}/{{ current_datetime.stdout }}
+    --mysql-user {{ mysql_username }}
+    --mysql-password {{ mysql_password }}
+    --mysql-repl-user {{ mysql_repl_username }}
+    --mysql-repl-password {{ mysql_repl_password }}
+  when: backup_source_is_master == "no"

@@ -1,0 +1,15 @@
+---
+# defaults file for mysql_replication_slave
+
+# The directory where dump and reload related data will be stored
+# on the slave to be
+output_dir: "/data/mysql_data"
+
+# this variable controls if the backup source server is to be used
+# as the replication master
+backup_source_is_master: "no"
+
+# Various MySQL options
+mysql_datadir: "/data/mysql_data"
+mysql_logdir: "/data/mysql_logs"
+mysql_tmpdir: "/data/mysql_data/tmp"
