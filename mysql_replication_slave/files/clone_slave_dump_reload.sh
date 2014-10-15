@@ -302,7 +302,7 @@ for tool_bin in ${mysqladmin_bin} ${mysql_bin}; do
     done
 done
 
-for tool_bin in ${mydumper_log} ${myloader_bin}; do
+for tool_bin in ${mydumper_bin} ${myloader_bin}; do
     if (( $(ssh ${target_host} "which $tool_bin" &> /dev/null; echo $?) != 0 )); then
         echo "Can't find $tool_bin on ${target_host}"
         exit 22 # OS error code  22:  Invalid argument
