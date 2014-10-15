@@ -116,6 +116,22 @@ function dump_mysql_data() {
 #    set +x
 }
 
+function create_user_to_reload_dump() {
+#    set -x
+
+    local mysql_args="--user=${mysql_username} --password=${mysql_password}"
+
+    vlog "Creating user ${mysql_username}@localhost on ${target_host} to reload the dump"
+    ssh ${target_host} "${mysql_bin} ${mysql_args} -e \"GRANT ALL PRIVILEGES ON *.* TO ${mysql_username}@'localhost' IDENTIFIED BY '${mysql_password}'\""
+
+    if (( $? != 0 )); then
+        echo "Failed to create the user ${mysql_username}@localhost"
+        exit 22
+    fi
+
+#    set +x
+}
+
 function reload_mysql_data() {
 #    set -x
 
@@ -324,6 +340,9 @@ setup_directories
 
 # Dump the MySQL data from backup_source_host
 dump_mysql_data
+
+# Create the user that will be used to reload the dump
+create_user_to_reload_dump
 
 # Reload MySQL data onto target_host
 reload_mysql_data
