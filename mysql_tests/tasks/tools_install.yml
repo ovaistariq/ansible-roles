@@ -13,3 +13,7 @@
     - tcpdump
   delegate_to: "{{ mysql_master_host }}"
   register: tools_install_master
+
+- name: install required tools on localhost
+  copy: src=pt-log-player dest=/usr/bin/pt-log-player owner=root group=root mode=0755
+  delegate_to: 127.0.0.1
