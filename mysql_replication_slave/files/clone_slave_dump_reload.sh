@@ -147,6 +147,10 @@ function reload_mysql_data() {
         exit 22
     fi
 
+    # Reloading MySQL privileges because mysql db would have been reloaded
+    local mysql_args="--user=${mysql_username} --password=${mysql_password}"
+    ssh ${target_host} "${mysql_bin} ${mysql_args} -e \"FLUSH PRIVILEGES\""
+
     vlog "MySQL data successfully reloaded. Log is available at ${myloader_log} on ${target_host}"
 
 #    set +x
