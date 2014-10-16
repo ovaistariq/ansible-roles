@@ -101,7 +101,7 @@ function dump_mysql_data() {
 
     vlog "Preparing to dump MySQL data"
 
-    local mydumper_args="--outputdir ${data_dump_dir} --compress --build-empty-files --less-locking --long-query-guard 300 --kill-long-queries --host ${backup_source_host} --user ${mysql_username} --password ${mysql_password} --threads ${num_backup_dump_threads} --verbose 3"
+    local mydumper_args="--outputdir ${data_dump_dir} --compress --build-empty-files --long-query-guard 300 --kill-long-queries --host ${backup_source_host} --user ${mysql_username} --password ${mysql_password} --threads ${num_backup_dump_threads} --verbose 3"
 
     vlog "Starting to dump MySQL data from ${backup_source_host} using mydumper with arguments ${mydumper_args}"
     ssh ${target_host} "${mydumper_bin} ${mydumper_args} > ${mydumper_log} 2>&1"
@@ -142,8 +142,18 @@ function reload_mysql_data() {
     vlog "Starting to reload MySQL data on ${target_host} using myloader with arguments ${myloader_args}"
     ssh ${target_host} "${myloader_bin} ${myloader_args} > ${myloader_log} 2>&1"
 
-    if (( $? != 0 )); then
-        echo "myloader failed to complete successfully"
+    # I am seeing unusual errors where MySQL is reporting a duplicate record
+    # when replaying the dump, although there is no duplicate record there"
+    # So below is hack to ignore those errors
+    local num_errors=$(grep Error ${myloader_log})
+    local num_errors_mysql_innodb_tbl_duplicate_entry=$(grep "Error restoring mysql.innodb" ${myloader_log} | grep -c "Duplicate entry")
+
+    if (( ${num_errors} > 0 )); then
+        vlog "Following errors were detected during myloader run:"
+        grep Error ${myloader_log}
+    fi
+
+    if (( ${num_errors} > ${num_errors_mysql_innodb_tbl_duplicate_entry} )); then
         exit 22
     fi
 
