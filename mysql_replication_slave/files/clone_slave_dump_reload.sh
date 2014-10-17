@@ -179,12 +179,12 @@ function setup_replication() {
 
     if [[ "${backup_source_is_master}" == "true" ]]; then
         repl_master=${backup_source_host}
-        binlog_filename=$(grep -A 2 "SHOW MASTER STATUS:" ${backup_metadata_file} | awk '/Log:/ {print $2}')
-        binlog_position=$(grep -A 2 "SHOW MASTER STATUS:" ${backup_metadata_file} | awk '/Pos:/ {print $2}')
+        binlog_filename=$(ssh ${target_host} "grep -A 2 'SHOW MASTER STATUS:' ${backup_metadata_file}" | awk '/Log:/ {print $2}')
+        binlog_position=$(ssh ${target_host} "grep -A 2 'SHOW MASTER STATUS:' ${backup_metadata_file}" | awk '/Pos:/ {print $2}')
     else
-        repl_master=$(grep -A 3 "SHOW SLAVE STATUS:" ${backup_metadata_file} | awk '/Host:/ {print $2}')
-        binlog_filename=$(grep -A 3 "SHOW SLAVE STATUS:" ${backup_metadata_file} | awk '/Log:/ {print $2}')
-        binlog_position=$(grep -A 3 "SHOW SLAVE STATUS:" ${backup_metadata_file} | awk '/Pos:/ {print $2}')
+        repl_master=$(ssh ${target_host} "grep -A 3 'SHOW SLAVE STATUS:' ${backup_metadata_file}" | awk '/Host:/ {print $2}')
+        binlog_filename=$(ssh ${target_host} "grep -A 3 'SHOW SLAVE STATUS:' ${backup_metadata_file}" | awk '/Log:/ {print $2}')
+        binlog_position=$(ssh ${target_host} "grep -A 3 'SHOW SLAVE STATUS:' ${backup_metadata_file}" | awk '/Pos:/ {print $2}')
     fi
 
     if [[ "${binlog_filename}" == "" ]] || [[ "${binlog_position}" == "" ]] || [[ "${repl_master}" == "" ]]; then
