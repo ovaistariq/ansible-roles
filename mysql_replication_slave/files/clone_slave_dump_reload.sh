@@ -117,12 +117,12 @@ function dump_mysql_data() {
     fi
 
     # copy the mydumper log to the host running this script
-    scp ${target_host}:${mydumper_log} ${output_dir}/${mydumper_log} &> /dev/null
+    scp ${target_host}:${mydumper_log} ${output_dir}/mydumper.log &> /dev/null
 
     # copy the data dump metadata file
     scp ${target_host}:${data_dump_dir}/metadata ${output_dir}/metadata &> /dev/null
 
-    vlog "MySQL data dump successfully completed. Log is available at ${output_dir}/${mydumper_log}"
+    vlog "MySQL data dump successfully completed. Log is available at ${output_dir}/mydumper.log"
 
 #    set +x
 }
@@ -153,17 +153,17 @@ function reload_mysql_data() {
     vlog "Starting to reload MySQL data on ${target_host} using myloader with arguments ${myloader_args}"
     ssh ${target_host} "${myloader_bin} ${myloader_args} > ${myloader_log} 2>&1"
 
-    scp ${target_host}:${myloader_log} ${output_dir}/${myloader_log} &> /dev/null
+    scp ${target_host}:${myloader_log} ${output_dir}/myloader.log &> /dev/null
 
     # I am seeing unusual errors where MySQL is reporting a duplicate record
     # when replaying the dump, although there is no duplicate record there"
     # So below is hack to ignore those errors
-    local num_errors=$(grep -c Error ${output_dir}/${myloader_log})
-    local num_errors_mysql_innodb_tbl_duplicate_entry=$(grep 'Error restoring mysql.innodb' ${output_dir}/${myloader_log} | grep -c 'Duplicate entry')
+    local num_errors=$(grep -c Error ${output_dir}/myloader.log)
+    local num_errors_mysql_innodb_tbl_duplicate_entry=$(grep 'Error restoring mysql.innodb' ${output_dir}/myloader.log | grep -c 'Duplicate entry')
 
     if (( ${num_errors} > 0 )); then
         vlog "Following errors were detected during myloader run:"
-        grep Error ${output_dir}/${myloader_log}
+        grep Error ${output_dir}/myloader.log
     fi
 
     if (( ${num_errors} > ${num_errors_mysql_innodb_tbl_duplicate_entry} )); then
@@ -174,7 +174,7 @@ function reload_mysql_data() {
     local mysql_args="--user=${mysql_username} --password=${mysql_password}"
     ssh ${target_host} "${mysql_bin} ${mysql_args} -e \"FLUSH PRIVILEGES\""
 
-    vlog "MySQL data successfully reloaded. Log is available at ${myloader_log} on ${target_host}"
+    vlog "MySQL data successfully reloaded. Log is available at ${output_dir}/myloader.log"
 
 #    set +x
 }
