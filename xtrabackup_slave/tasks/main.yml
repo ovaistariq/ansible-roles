@@ -12,15 +12,6 @@
     msg: "The operating system of the target machine ({{ inventory_hostname }}) is not currently supported."
   when: mysql_supported_os is not defined
 
-- name: configure the client password file
-  template: src=client_my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
-  when: mysql_root_password is defined
-
-- name: configure the client password file on backup source host
-  template: src=client_my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
-  delegate_to: "{{ backup_source_host }}"
-  when: mysql_root_password is defined
-
 - name: include percona specific tasks
   include: percona.yml
 
