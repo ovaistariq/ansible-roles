@@ -1,4 +1,4 @@
-#!/bin/bash -ux
+#!/bin/bash -u
 
 # Configuration options
 # The MySQL server that will be used as the source of the dump
