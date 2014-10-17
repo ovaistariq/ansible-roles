@@ -145,8 +145,8 @@ function reload_mysql_data() {
     # I am seeing unusual errors where MySQL is reporting a duplicate record
     # when replaying the dump, although there is no duplicate record there"
     # So below is hack to ignore those errors
-    local num_errors=$(grep Error ${myloader_log})
-    local num_errors_mysql_innodb_tbl_duplicate_entry=$(grep "Error restoring mysql.innodb" ${myloader_log} | grep -c "Duplicate entry")
+    local num_errors=$(ssh ${target_host} "grep -c Error ${myloader_log}")
+    local num_errors_mysql_innodb_tbl_duplicate_entry=$(ssh ${target_host} "grep 'Error restoring mysql.innodb' ${myloader_log} | grep -c 'Duplicate entry'")
 
     if (( ${num_errors} > 0 )); then
         vlog "Following errors were detected during myloader run:"
