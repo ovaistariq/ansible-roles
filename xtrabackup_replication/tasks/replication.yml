@@ -36,15 +36,15 @@
 
 - name: stop slave for new configuration
   mysql_replication: 
-    login_user: root
-    login_password: "{{ mysql_root_password }}"
+    login_user: "{{ mysql_username }}"
+    login_password: "{{ mysql_password }}"
     login_unix_socket: "{{ mysql_socket }}"
     mode: stopslave 
 
 - name: configure slave to replicate with the master using xtrabackup_binlog_info
   mysql_replication:
-    login_user: root
-    login_password: "{{ mysql_root_password }}"
+    login_user: "{{ mysql_username }}"
+    login_password: "{{ mysql_password }}"
     login_unix_socket: "{{ mysql_socket }}"
     mode: changemaster
     master_host: "{{ mysql_master_host }}"
@@ -57,8 +57,8 @@
 
 - name: configure slave to replicate with the master using xtrabackup_slave_info
   mysql_replication:
-    login_user: root
-    login_password: "{{ mysql_root_password }}"
+    login_user: "{{ mysql_username }}"
+    login_password: "{{ mysql_password }}"
     login_unix_socket: "{{ mysql_socket }}"
     mode: changemaster
     master_host: "{{ mysql_master_host }}"
@@ -71,8 +71,8 @@
 
 - name: start replication
   mysql_replication:
-    login_user: root
-    login_password: "{{ mysql_root_password }}"
+    login_user: "{{ mysql_username }}"
+    login_password: "{{ mysql_password }}"
     login_unix_socket: "{{ mysql_socket }}"
     mode: startslave
   when: mysql_master_host is defined

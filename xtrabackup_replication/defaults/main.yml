@@ -2,3 +2,4 @@
 # defaults file for xtrabackup_replication
 
 mysql_datadir: "/data/mysql_data"
+mysql_socket: "/data/mysql_data/mysql.sock"

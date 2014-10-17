@@ -15,11 +15,14 @@ Role Variables
 These variables have to be defined in the playbook, since there are no defaults defined for them
 * `backup_source_host` The hostname of the MySQL server that was backed up to clone the new slave
 * `mysql_master_host` The hostname of the MySQL server that will be the master of the new slave, if the backup was taken from the slave
+* `mysql_username` The MySQL user used to configure replication by executing CHANGE MASTER
+* `mysql_password` The password of the MySQL user used to configure replication
 * `mysql_replication_user` The MySQL user used by the replication threads
 * `mysql_replication_password` The password of the MySQL user used by replication threads
 
 ## Standard
 * `mysql_datadir` Defaults to /data/mysql_data
+* `mysql_socket` Defaults to /data/mysql_data/mysql.sock
 
 Dependencies
 ------------
@@ -35,6 +38,8 @@ Including an example of how to use this role with variables passed in as paramet
       roles:
          - { role: xtrabackup_replication, backup_source_host: "hostname",
                 mysql_master_host: "hostname",
+                mysql_username: "some_username",
+                mysql_password: "changeme",
                 mysql_replication_user: "some_username",
                 mysql_replication_password: "some_password" }
 
