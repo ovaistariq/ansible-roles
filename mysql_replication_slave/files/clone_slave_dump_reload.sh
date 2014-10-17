@@ -17,6 +17,9 @@ target_host=
 backup_source_is_master=false
 
 # The directory on target_host where dump files will be temporarily stored
+target_dump_dir=
+
+# The directory where the dump and reload related logs will be stored
 output_dir=
 
 # Read-only MySQL user credentials that will be used to dump the MySQL data
@@ -89,9 +92,11 @@ function test_mysql_access() {
 function setup_directories() {
 #    set -x
 
-    vlog "Setting up directory ${output_dir} ${data_dump_dir} on ${target_host}"
+    vlog "Setting up directory ${target_dump_dir} ${data_dump_dir} on ${target_host}"
+    ssh -q ${target_host} "mkdir -p ${target_dump_dir} ${data_dump_dir}"
 
-    ssh -q ${target_host} "mkdir -p ${output_dir} ${data_dump_dir}"
+    vlog "Setting up directory ${output_dir}"
+    mkdir -p ${output_dir}
 
 #    set +x
 }
@@ -111,7 +116,13 @@ function dump_mysql_data() {
         exit 22
     fi
 
-    vlog "MySQL data dump successfully completed. Log is available at ${mydumper_log} on ${target_host}"
+    # copy the mydumper log to the host running this script
+    scp ${target_host}:${mydumper_log} ${output_dir}/${mydumper_log} &> /dev/null
+
+    # copy the data dump metadata file
+    scp ${target_host}:${data_dump_dir}/metadata ${output_dir}/metadata &> /dev/null
+
+    vlog "MySQL data dump successfully completed. Log is available at ${output_dir}/${mydumper_log}"
 
 #    set +x
 }
@@ -142,15 +153,17 @@ function reload_mysql_data() {
     vlog "Starting to reload MySQL data on ${target_host} using myloader with arguments ${myloader_args}"
     ssh ${target_host} "${myloader_bin} ${myloader_args} > ${myloader_log} 2>&1"
 
+    scp ${target_host}:${myloader_log} ${output_dir}/${myloader_log} &> /dev/null
+
     # I am seeing unusual errors where MySQL is reporting a duplicate record
     # when replaying the dump, although there is no duplicate record there"
     # So below is hack to ignore those errors
-    local num_errors=$(ssh ${target_host} "grep -c Error ${myloader_log}")
-    local num_errors_mysql_innodb_tbl_duplicate_entry=$(ssh ${target_host} "grep 'Error restoring mysql.innodb' ${myloader_log} | grep -c 'Duplicate entry'")
+    local num_errors=$(grep -c Error ${output_dir}/${myloader_log})
+    local num_errors_mysql_innodb_tbl_duplicate_entry=$(grep 'Error restoring mysql.innodb' ${output_dir}/${myloader_log} | grep -c 'Duplicate entry')
 
     if (( ${num_errors} > 0 )); then
         vlog "Following errors were detected during myloader run:"
-        grep Error ${myloader_log}
+        grep Error ${output_dir}/${myloader_log}
     fi
 
     if (( ${num_errors} > ${num_errors_mysql_innodb_tbl_duplicate_entry} )); then
@@ -169,7 +182,7 @@ function reload_mysql_data() {
 function setup_replication() {
 #    set -x
 
-    local backup_metadata_file="${data_dump_dir}/metadata"
+    local backup_metadata_file="${output_dir}/metadata"
     local repl_master=
     local binlog_filename=
     local binlog_position=
@@ -179,12 +192,12 @@ function setup_replication() {
 
     if [[ "${backup_source_is_master}" == "true" ]]; then
         repl_master=${backup_source_host}
-        binlog_filename=$(ssh ${target_host} "grep -A 2 'SHOW MASTER STATUS:' ${backup_metadata_file}" | awk '/Log:/ {print $2}')
-        binlog_position=$(ssh ${target_host} "grep -A 2 'SHOW MASTER STATUS:' ${backup_metadata_file}" | awk '/Pos:/ {print $2}')
+        binlog_filename=$(grep -A 2 'SHOW MASTER STATUS:' ${backup_metadata_file} | awk '/Log:/ {print $2}')
+        binlog_position=$(grep -A 2 'SHOW MASTER STATUS:' ${backup_metadata_file} | awk '/Pos:/ {print $2}')
     else
-        repl_master=$(ssh ${target_host} "grep -A 3 'SHOW SLAVE STATUS:' ${backup_metadata_file}" | awk '/Host:/ {print $2}')
-        binlog_filename=$(ssh ${target_host} "grep -A 3 'SHOW SLAVE STATUS:' ${backup_metadata_file}" | awk '/Log:/ {print $2}')
-        binlog_position=$(ssh ${target_host} "grep -A 3 'SHOW SLAVE STATUS:' ${backup_metadata_file}" | awk '/Pos:/ {print $2}')
+        repl_master=$(grep -A 3 'SHOW SLAVE STATUS:' ${backup_metadata_file} | awk '/Host:/ {print $2}')
+        binlog_filename=$(grep -A 3 'SHOW SLAVE STATUS:' ${backup_metadata_file} | awk '/Log:/ {print $2}')
+        binlog_position=$(grep -A 3 'SHOW SLAVE STATUS:' ${backup_metadata_file} | awk '/Pos:/ {print $2}')
     fi
 
     if [[ "${binlog_filename}" == "" ]] || [[ "${binlog_position}" == "" ]] || [[ "${repl_master}" == "" ]]; then
@@ -216,7 +229,7 @@ function setup_replication() {
 # Usage info
 function show_help() {
 cat << EOF
-Usage: ${0##*/} --backup-source-host BACKUP_SOURCE_HOST --target-host TARGET_HOST --output-dir OUTPUT_DIR --mysql-user MYSQL_USER --mysql-password MYSQL_PASSWORD --mysql-repl-user MYSQL_REPL_USER --mysql-repl-password MYSQL_REPL_PASSWD [options]
+Usage: ${0##*/} --backup-source-host BACKUP_SOURCE_HOST --target-host TARGET_HOST --target-tmp-dir TARGET_TMP_DIR --output-dir OUTPUT_DIR --mysql-user MYSQL_USER --mysql-password MYSQL_PASSWORD --mysql-repl-user MYSQL_REPL_USER --mysql-repl-password MYSQL_REPL_PASSWD [options]
 Take dump from MySQL server BACKUP_SOURCE_HOST and use the dump to setup TARGET_HOST as slave
 
 Options:
@@ -226,9 +239,11 @@ Options:
                                             source of the dump
     --target-host TARGET_HOST               the host that has to be setup as
                                             the slave
-    --output-dir OUTPUT_DIR                 the directory on the target-host
-                                            that will store the dump and reload
-                                            related data and logs
+    --target-tmp-dir TARGET_TMP_DIR         the directory on the target-host
+                                            that will temporarily store the
+                                            dump and reload related data
+    --output-dir OUTPUT_DIR                 the directory that will store the
+                                            dump and reload related logs
     --mysql-user MYSQL_USER                 the MySQL username that would be
                                             used to dump the MySQL data
     --mysql-password MYSQL_PASSWORD         the MySQL user password
@@ -246,7 +261,7 @@ function show_help_and_exit() {
 }
 
 # Command line processing
-OPTS=$(getopt -o hcb:T:o:u:p:U:P: --long help,backup-source-is-master,backup-source-host:,target-host:,output-dir:,mysql-user:,mysql-password:,mysql-repl-user:,mysql-repl-password: -n 'clone_slave_dump_reload.sh' -- "$@")
+OPTS=$(getopt -o hcb:T:t:o:u:p:U:P: --long help,backup-source-is-master,backup-source-host:,target-host:,target-tmp-dir:,output-dir:,mysql-user:,mysql-password:,mysql-repl-user:,mysql-repl-password: -n 'clone_slave_dump_reload.sh' -- "$@")
 [ $? != 0 ] && show_help_and_exit
 
 eval set -- "$OPTS"
@@ -259,6 +274,10 @@ while true; do
                                 ;;
     -T | --target-host )
                                 target_host="$2";
+                                shift; shift
+                                ;;
+    -t | --target-tmp-dir )
+                                target_dump_dir="$2";
                                 shift; shift
                                 ;;
     -o | --output-dir )
@@ -307,6 +326,8 @@ done
 ssh -q ${target_host} "exit"
 (( $? != 0 )) && show_error_n_exit "Could not SSH into ${target_host}"
 
+[[ -z ${target_dump_dir} ]] && show_help_and_exit >&2
+
 [[ -z ${output_dir} ]] && show_help_and_exit >&2
 
 [[ -z ${mysql_username} ]] && show_help_and_exit >&2
@@ -318,9 +339,9 @@ ssh -q ${target_host} "exit"
 [[ -z ${mysql_repl_password} ]] && show_help_and_exit >&2
 
 # Setup various config options
-data_dump_dir="${output_dir}/data_dump"
-mydumper_log="${output_dir}/mydumper.log"
-myloader_log="${output_dir}/myloader.log"
+data_dump_dir="${target_dump_dir}/data_dump"
+mydumper_log="${target_dump_dir}/mydumper.log"
+myloader_log="${target_dump_dir}/myloader.log"
 
 # Test that all tools are available
 for tool_bin in ${mysqladmin_bin} ${mysql_bin}; do
