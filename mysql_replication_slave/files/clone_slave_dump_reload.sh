@@ -60,7 +60,7 @@ function show_error_n_exit() {
 function cleanup() {
     vlog "Doing cleanup before exiting"
 
-    ssh ${target_host} "rm -rf ${data_dump_dir}/*.sql.gz"
+    ssh ${target_host} "rm -rf ${target_dump_dir}"
 
     #TODO: add code to cleanup any running child processes
 }
