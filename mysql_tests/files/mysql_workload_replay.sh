@@ -159,7 +159,7 @@ function run_benchmark() {
     fi
 
     vlog "Preparing the session files for pt-log-player"
-    ${pt_log_player_bin} --split Thread_id --session-files ${mysql_thd_conc} \
+    ${pt_log_player_bin} --split-random --session-files ${mysql_thd_conc} \
         --base-dir ${master_sessions_dir} ${slowlog_file} \
         > ${master_tmp_dir}/pt_log_player.log \
         2> ${master_tmp_dir}/pt_log_player.err
