@@ -1,3 +1,2 @@
 ---
-dependencies:
-- { role: percona_toolkit }
+# The dependencies of the mysql_tests role

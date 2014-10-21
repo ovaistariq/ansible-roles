@@ -32,7 +32,6 @@ Dependencies
 
 * The role depends on the {{ mysql_master_host }}, {{ mysql_compare_host }} being accessible via ssh from the host that will use the role.
 * The role also depends on port 7778 being open between {{ mysql_master_host }} and the host which is supposed to be benchmarked.
-* The role depends on the percona_toolkit role.
 
 Example Playbook
 -------------------------
