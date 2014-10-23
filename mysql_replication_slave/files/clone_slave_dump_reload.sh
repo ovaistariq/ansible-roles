@@ -109,15 +109,12 @@ function dump_mysql_data() {
     local mydumper_args="--outputdir ${data_dump_dir} --compress --build-empty-files --long-query-guard 300 --kill-long-queries --host ${backup_source_host} --user ${mysql_username} --password ${mysql_password} --threads ${num_backup_dump_threads} --verbose 3"
 
     vlog "Starting to dump MySQL data from ${backup_source_host} using mydumper with arguments ${mydumper_args}"
-    ssh ${target_host} "${mydumper_bin} ${mydumper_args} > ${mydumper_log} 2>&1"
+    ssh ${target_host} "${mydumper_bin} ${mydumper_args}" > ${output_dir}/mydumper.log 2>&1
 
     if (( $? != 0 )); then
         echo "mydumper failed to complete successfully"
         exit 22
     fi
-
-    # copy the mydumper log to the host running this script
-    scp ${target_host}:${mydumper_log} ${output_dir}/mydumper.log &> /dev/null
 
     # copy the data dump metadata file
     scp ${target_host}:${data_dump_dir}/metadata ${output_dir}/metadata &> /dev/null
@@ -151,9 +148,7 @@ function reload_mysql_data() {
     local myloader_args="--directory ${data_dump_dir} --overwrite-tables --host localhost --user ${mysql_username} --password ${mysql_password} --threads ${num_backup_reload_threads} --verbose 3"
 
     vlog "Starting to reload MySQL data on ${target_host} using myloader with arguments ${myloader_args}"
-    ssh ${target_host} "${myloader_bin} ${myloader_args} > ${myloader_log} 2>&1"
-
-    scp ${target_host}:${myloader_log} ${output_dir}/myloader.log &> /dev/null
+    ssh ${target_host} "${myloader_bin} ${myloader_args}" > ${output_dir}/myloader.log 2>&1
 
     # I am seeing unusual errors where MySQL is reporting a duplicate record
     # when replaying the dump, although there is no duplicate record there"
