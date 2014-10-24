@@ -145,6 +145,14 @@ function reload_mysql_data() {
 
     vlog "Preparing to reload MySQL data"
 
+    # We disable slow query logging before doing the reload, otherwise 
+    # slow logging might fill up the available disk space
+    vlog "Disabling slow query logging if its enabled"
+
+    local mysql_args="--user=${mysql_username} --password=${mysql_password}"
+    local slow_query_log_flag=$(ssh ${target_host} "${mysql_bin} ${mysql_args} -NB -e \"SHOW VARIABLES LIKE 'slow_query_log'\"" 2> /dev/null | awk '{print $2}')
+    ssh ${target_host} "${mysql_bin} ${mysql_args} -e \"SET GLOBAL slow_query_log=0\""
+
     local myloader_args="--directory ${data_dump_dir} --overwrite-tables --host localhost --user ${mysql_username} --password ${mysql_password} --threads ${num_backup_reload_threads} --verbose 3"
 
     vlog "Starting to reload MySQL data on ${target_host} using myloader with arguments ${myloader_args}"
@@ -165,11 +173,17 @@ function reload_mysql_data() {
         exit 22
     fi
 
+    vlog "MySQL data successfully reloaded. Log is available at ${output_dir}/myloader.log"
+
     # Reloading MySQL privileges because mysql db would have been reloaded
+    vlog "Reloading MySQL privileges"
+
     local mysql_args="--user=${mysql_username} --password=${mysql_password}"
     ssh ${target_host} "${mysql_bin} ${mysql_args} -e \"FLUSH PRIVILEGES\""
 
-    vlog "MySQL data successfully reloaded. Log is available at ${output_dir}/myloader.log"
+    # Enabling slow query logging
+    vlog "Resetting slow query logging to previous state"
+    ssh ${target_host} "${mysql_bin} ${mysql_args} -e \"SET GLOBAL slow_query_log=${slow_query_log_flag}\""
 
 #    set +x
 }
