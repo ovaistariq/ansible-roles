@@ -40,6 +40,7 @@ num_backup_reload_threads=16
 # Setup tools
 mysqladmin_bin="/usr/bin/mysqladmin"
 mysql_bin="/usr/bin/mysql"
+mysql_upgrade_bin="/usr/bin/mysql_upgrade"
 mydumper_bin="/usr/bin/mydumper"
 myloader_bin="/usr/bin/myloader"
 
@@ -186,6 +187,13 @@ function reload_mysql_data() {
     ssh ${target_host} "${mysql_bin} ${mysql_args} -e \"SET GLOBAL slow_query_log=${slow_query_log_flag}\""
 
 #    set +x
+}
+
+function run_mysql_upgrade() {
+    local mysql_upgrade_args="--user=${mysql_username} --password=${mysql_password}"
+
+    vlog "Executing mysql_upgrade --upgrade-system-tables"
+    ssh ${target_host} "${mysql_upgrade_bin} ${mysql_upgrade_args} --upgrade-system-tables"
 }
 
 function setup_replication() {
@@ -353,7 +361,7 @@ mydumper_log="${target_dump_dir}/mydumper.log"
 myloader_log="${target_dump_dir}/myloader.log"
 
 # Test that all tools are available
-for tool_bin in ${mysqladmin_bin} ${mysql_bin}; do
+for tool_bin in ${mysqladmin_bin} ${mysql_bin} ${mysql_upgrade_bin}; do
     for host in ${backup_source_host} ${target_host}; do
         if (( $(ssh ${host} "which $tool_bin" &> /dev/null; echo $?) != 0 )); then
             echo "Can't find $tool_bin on ${host}"
@@ -390,6 +398,9 @@ create_user_to_reload_dump
 
 # Reload MySQL data onto target_host
 reload_mysql_data
+
+# Upgrade system tables
+run_mysql_upgrade
 
 # Configure replication
 setup_replication
