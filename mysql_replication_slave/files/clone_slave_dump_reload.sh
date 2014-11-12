@@ -41,6 +41,7 @@ num_backup_reload_threads=16
 mysqladmin_bin="/usr/bin/mysqladmin"
 mysql_bin="/usr/bin/mysql"
 mysql_upgrade_bin="/usr/bin/mysql_upgrade"
+mysqldump_bin="/usr/bin/mysqldump"
 mydumper_bin="/usr/bin/mydumper"
 myloader_bin="/usr/bin/myloader"
 
@@ -117,6 +118,11 @@ function dump_mysql_data() {
         exit 22
     fi
 
+    # dump the triggers separately
+    vlog "Dumping TRIGGERs using mysqldump with arguments ${mysqldump_args}"
+    local mysqldump_args="--host=${backup_source_host} --user=${mysql_username} --password=${mysql_password} --triggers --add-drop-trigger --no-create-db --no-data --no-create-info --all-databases --skip-opt"
+    ssh ${target_host} "${mysqldump_bin} ${mysqldump_args} > ${data_dump_dir}/triggers.sql"
+
     # copy the data dump metadata file
     scp ${target_host}:${data_dump_dir}/metadata ${output_dir}/metadata &> /dev/null
 
@@ -178,9 +184,15 @@ function reload_mysql_data() {
 
     # Reloading MySQL privileges because mysql db would have been reloaded
     vlog "Reloading MySQL privileges"
-
     local mysql_args="--user=${mysql_username} --password=${mysql_password}"
     ssh ${target_host} "${mysql_bin} ${mysql_args} -e \"FLUSH PRIVILEGES\""
+
+    # Reload the triggers now that the dump reload is complete
+    # We reload triggers afterwards because we do not want triggers to fire
+    # unnecessarily while dump is loading and prevent them from causing data
+    # duplication
+    vlog "Creating TRIGGERs"
+    ssh ${target_host} "${mysql_bin} ${mysql_args} < ${data_dump_dir}/triggers.sql"
 
     # Enabling slow query logging
     vlog "Resetting slow query logging to previous state"
