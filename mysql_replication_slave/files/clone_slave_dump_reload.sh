@@ -119,8 +119,9 @@ function dump_mysql_data() {
     fi
 
     # dump the triggers separately
-    vlog "Dumping TRIGGERs using mysqldump with arguments ${mysqldump_args}"
     local mysqldump_args="--host=${backup_source_host} --user=${mysql_username} --password=${mysql_password} --triggers --add-drop-trigger --no-create-db --no-data --no-create-info --all-databases --skip-opt"
+    
+    vlog "Dumping TRIGGERs using mysqldump with arguments ${mysqldump_args}"
     ssh ${target_host} "${mysqldump_bin} ${mysqldump_args} > ${data_dump_dir}/triggers.sql"
 
     # copy the data dump metadata file
