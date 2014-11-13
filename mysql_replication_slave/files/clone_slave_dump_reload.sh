@@ -108,7 +108,7 @@ function dump_mysql_data() {
 
     vlog "Preparing to dump MySQL data"
 
-    local mydumper_args="--outputdir ${data_dump_dir} --compress --build-empty-files --long-query-guard 300 --kill-long-queries --host ${backup_source_host} --user ${mysql_username} --password ${mysql_password} --threads ${num_backup_dump_threads} --verbose 3"
+    local mydumper_args="--outputdir ${data_dump_dir} --compress --build-empty-files --chunk-filesize 50 --long-query-guard 300 --kill-long-queries --host ${backup_source_host} --user ${mysql_username} --password ${mysql_password} --threads ${num_backup_dump_threads} --verbose 3"
 
     vlog "Starting to dump MySQL data from ${backup_source_host} using mydumper with arguments ${mydumper_args}"
     ssh ${target_host} "${mydumper_bin} ${mydumper_args}" > ${output_dir}/mydumper.log 2>&1
@@ -120,9 +120,9 @@ function dump_mysql_data() {
 
     # dump the triggers separately
     local mysqldump_args="--host=${backup_source_host} --user=${mysql_username} --password=${mysql_password} --triggers --add-drop-trigger --no-create-db --no-data --no-create-info --all-databases --skip-opt"
-    
+
     vlog "Dumping TRIGGERs using mysqldump with arguments ${mysqldump_args}"
-    ssh ${target_host} "${mysqldump_bin} ${mysqldump_args} > ${data_dump_dir}/triggers.sql"
+    ssh ${target_host} "${mysqldump_bin} ${mysqldump_args} > ${target_dump_dir}/triggers.sql"
 
     # copy the data dump metadata file
     scp ${target_host}:${data_dump_dir}/metadata ${output_dir}/metadata &> /dev/null
@@ -193,7 +193,7 @@ function reload_mysql_data() {
     # unnecessarily while dump is loading and prevent them from causing data
     # duplication
     vlog "Creating TRIGGERs"
-    ssh ${target_host} "${mysql_bin} ${mysql_args} < ${data_dump_dir}/triggers.sql"
+    ssh ${target_host} "${mysql_bin} ${mysql_args} < ${target_dump_dir}/triggers.sql"
 
     # Enabling slow query logging
     vlog "Resetting slow query logging to previous state"
