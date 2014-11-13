@@ -193,7 +193,7 @@ function reload_mysql_data() {
     # unnecessarily while dump is loading and prevent them from causing data
     # duplication
     vlog "Creating TRIGGERs"
-    ssh ${target_host} "${mysql_bin} ${mysql_args} < ${target_dump_dir}/triggers.sql"
+    ssh ${target_host} "${mysql_bin} ${mysql_args} --force < ${target_dump_dir}/triggers.sql"
 
     # Enabling slow query logging
     vlog "Resetting slow query logging to previous state"
