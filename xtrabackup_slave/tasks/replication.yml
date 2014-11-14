@@ -1,0 +1,27 @@
+---
+- name: replication | check for the mysql_repl_username variable
+  fail: msg="mysql_repl_username has not been defined."
+  when: mysql_repl_username is not defined
+
+- name: replication | check for the mysql_repl_password variable
+  fail: msg="mysql_repl_password has not been defined."
+  when: mysql_repl_password is not defined
+
+- name: replication | check for the mysql_master_host variable
+  fail: msg="mysql_master_host has not been defined."
+  when: mysql_master_host is not defined
+
+- name: replication | ensure mysql service is running
+  service: name={{ mysql_service_name }} state=started
+
+- name: replication | configure and start replication
+  local_action: >
+    script configure_replication.sh
+    --backup-source-host {{ backup_source_host }}
+    --mysql-master-host {{ mysql_master_host }}
+    --slave-host {{ hostvars[inventory_hostname]['ansible_hostname'] }}
+    --slave-datadir {{ mysql_datadir }}
+    --mysql-user {{ mysql_username }}
+    --mysql-password {{ mysql_password }}
+    --mysql-repl-user {{ mysql_repl_username }}
+    --mysql-repl-password {{ mysql_repl_password }}

@@ -1,7 +1,6 @@
 xtrabackup_slave
 ================
-This is a role to backup using Percona XtraBackup a MySQL server, stream it to a new machine and prepare it so that it is ready to be used to setup a new slave. This role does not setup replication. 
-Rather, it must be used together with `xtrabackup_replication` role to complete the replication setup of the slave.
+This is a role to backup using Percona XtraBackup a MySQL server, stream it to a new machine, prepare it and then use it to configure a new slave.
 
 Requirements
 ------------
@@ -14,6 +13,11 @@ Role Variables
 ## Mandatory
 These variables have to be defined in the playbook, since there are no defaults defined for them
 * `backup_source_host` The hostname of the MySQL server that will be backed up to clone a new slave
+* `mysql_master_host` The hostname of the MySQL server that will be the master of the new slave, if the backup was taken from the slave
+* `mysql_username` The MySQL user used to configure replication by executing CHANGE MASTER
+* `mysql_password` The password of the MySQL user used to configure replication
+* `mysql_repl_username` The MySQL user used by the replication threads
+* `mysql_repl_password` The password of the MySQL user used by replication threads
 
 ## Standard
 * `mysql_datadir` Defaults to /data/mysql_data
@@ -33,7 +37,12 @@ Including an example of how to use this role with variables passed in as paramet
 
     - hosts: servers
       roles:
-         - { role: xtrabackup_slave, backup_source_host: "hostname" }
+         - { role: xtrabackup_slave, backup_source_host: "hostname",
+                mysql_master_host: "hostname",
+                mysql_username: "some_username",
+                mysql_password: "changeme",
+                mysql_repl_username: "some_username",
+                mysql_repl_password: "some_password" }
 
 Author Information
 ------------------
