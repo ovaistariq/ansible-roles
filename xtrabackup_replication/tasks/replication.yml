@@ -11,27 +11,27 @@
   fail: msg="mysql_master_host has not been defined."
   when: mysql_master_host is not defined
 
-- name: get master log filename from xtrabackup_binlog_info
+- name: replication | fetch master log filename from xtrabackup_binlog_info
   shell: cut -f 1 {{ mysql_datadir }}/xtrabackup_binlog_info
   register: xtrabackup_binlog_info_file
   when: backup_source_host == mysql_master_host
 
-- name: get master log position from xtrabackup_binlog_info
+- name: replication | fetch master log position from xtrabackup_binlog_info
   shell: cut -f 2 {{ mysql_datadir }}/xtrabackup_binlog_info
   register: xtrabackup_binlog_info_pos
   when: backup_source_host == mysql_master_host
 
-- name: get master log filename from xtrabackup_slave_info
+- name: replication | fetch master log filename from xtrabackup_slave_info
   shell: cut -d "'" -f 2 {{ mysql_datadir }}/xtrabackup_slave_info
   register: xtrabackup_slave_info_file
   when: backup_source_host != mysql_master_host
 
-- name: get master log position from xtrabackup_slave_info
+- name: replication | fetch master log position from xtrabackup_slave_info
   shell: cut -d "=" -f 3 {{ mysql_datadir }}/xtrabackup_slave_info
   register: xtrabackup_slave_info_pos
   when: backup_source_host != mysql_master_host
 
-- name: ensure mysql service is running
+- name: replication | ensure mysql service is running
   service: name={{ mysql_service_name }} state=started
 
 - name: stop slave for new configuration
@@ -41,7 +41,7 @@
     login_unix_socket: "{{ mysql_socket }}"
     mode: stopslave 
 
-- name: configure slave to replicate with the master using xtrabackup_binlog_info
+- name: replication | configure slave to replicate with the master using xtrabackup_binlog_info
   mysql_replication:
     login_user: "{{ mysql_username }}"
     login_password: "{{ mysql_password }}"
@@ -55,7 +55,7 @@
   when: xtrabackup_binlog_info_file.stdout != "" and xtrabackup_binlog_info_pos.stdout != "" and mysql_master_host is defined and backup_source_host == mysql_master_host
   ignore_errors: True
 
-- name: configure slave to replicate with the master using xtrabackup_slave_info
+- name: replication | configure slave to replicate with the master using xtrabackup_slave_info
   mysql_replication:
     login_user: "{{ mysql_username }}"
     login_password: "{{ mysql_password }}"
@@ -69,7 +69,7 @@
   when: xtrabackup_slave_info_file.stdout != "" and xtrabackup_slave_info_pos.stdout != "" and mysql_master_host is defined and backup_source_host != mysql_master_host
   ignore_errors: True
 
-- name: start replication
+- name: replication | start replication
   mysql_replication:
     login_user: "{{ mysql_username }}"
     login_password: "{{ mysql_password }}"
