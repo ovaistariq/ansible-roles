@@ -9,3 +9,6 @@ output_dir: "/var/lib/mysql_tests/sjc1ppod09"
 run_workload_replay_test: "yes"
 run_pt_upgrade_test: "yes"
 do_cleanup_after_tests: "yes"
+
+# by default the workload replay test is done by warming up the caches
+benchmark_cold_run: "no"

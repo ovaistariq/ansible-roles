@@ -26,6 +26,7 @@ These variables have to be defined in the playbook, since there are no defaults 
 * `run_workload_replay_test` Should the "workload replay" test be run, defaults to 'yes'
 * `run_pt_upgrade_test` Should the "pt-upgrade" test be run, defaults to 'yes'
 * `do_cleanup_after_tests` Should the tcpdump and slow log files created during the tests run be cleaned up, defaults to 'yes'
+# `benchmark_cold_run` Should the "workload replay" test be run with cold caches, defaults to 'no'
 
 Dependencies
 ------------

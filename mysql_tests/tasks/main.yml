@@ -28,7 +28,7 @@
     --target-tmpdir {{ target_tmpdir }}/{{ current_datetime.stdout }}
     --output-dir {{ output_dir }}/{{ current_datetime.stdout }}
 
-- name: replay MySQL production workload to gauge MySQL performance
+- name: replay MySQL production workload to gauge MySQL performance with cold caches
   local_action: >
     script mysql_workload_replay.sh
     --master-host {{ mysql_master_host }}
@@ -38,7 +38,18 @@
     --mysql-user {{ mysql_ro_username }}
     --mysql-password {{ mysql_ro_password }}
     --cold-run
-  when: run_workload_replay_test == "yes"
+  when: run_workload_replay_test == "yes" and benchmark_cold_run == "yes"
+
+- name: replay MySQL production workload to gauge MySQL performance with warm caches
+  local_action: >
+    script mysql_workload_replay.sh
+    --master-host {{ mysql_master_host }}
+    --compare-host {{ mysql_compare_host }}
+    --target-host {{ hostvars[inventory_hostname]['ansible_hostname'] }}
+    --output-dir {{ output_dir }}/{{ current_datetime.stdout }}
+    --mysql-user {{ mysql_ro_username }}
+    --mysql-password {{ mysql_ro_password }}
+  when: run_workload_replay_test == "yes" and benchmark_cold_run != "yes"
 
 - name: run pt-upgrade tests
   local_action: >
