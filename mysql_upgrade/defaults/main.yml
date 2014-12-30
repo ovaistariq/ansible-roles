@@ -1,6 +1,6 @@
 ---
 # defaults file for mysql_upgrade
-mysql_logdir: "/data/mysql_logs"
+mysql_logdir: "/var/log/mysql"
 
 # Various facts about the machine
 ip_address: '{{ ansible_default_ipv4.address }}'

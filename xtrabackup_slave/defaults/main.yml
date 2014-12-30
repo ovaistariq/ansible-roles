@@ -1,7 +1,7 @@
 ---
 # defaults file for xtrabackup_slave
 
-mysql_datadir: "/data/mysql_data"
-mysql_logdir: "/data/mysql_logs"
-mysql_tmpdir: "/data/mysql_data/tmp"
+mysql_datadir: "/var/lib/mysql"
+mysql_logdir: "/var/log/mysql"
+mysql_tmpdir: "/tmp"
 

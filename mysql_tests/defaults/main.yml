@@ -3,7 +3,7 @@
 
 benchmark_seconds: 1800
 target_tmpdir: "/tmp/mysql_tests"
-output_dir: "/var/lib/mysql_tests/sjc1ppod09"
+output_dir: "/var/lib/mysql_tests"
 
 # these variables control whats tests should be run
 run_workload_replay_test: "yes"

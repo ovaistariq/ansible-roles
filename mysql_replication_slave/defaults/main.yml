@@ -3,7 +3,7 @@
 
 # The directory where dump data will be temporarily stored
 # on the slave to be
-target_tmp_dir: "/data/mysql_data/mysql_replication_slave"
+target_tmp_dir: "/var/lib/mysql/mysql_replication_slave"
 
 # The directory where dump and reload related logs will be stored
 # on the host running this role
@@ -15,6 +15,6 @@ backup_source_is_master: "no"
 
 # Various MySQL options
 mysql_user: "mysql"
-mysql_datadir: "/data/mysql_data"
-mysql_logdir: "/data/mysql_logs"
-mysql_tmpdir: "/data/mysql_data/tmp"
+mysql_datadir: "/var/lib/mysql"
+mysql_logdir: "/var/log/mysql"
+mysql_tmpdir: "/tmp"

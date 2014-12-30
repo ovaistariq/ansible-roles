@@ -18,7 +18,7 @@ These variables have to be defined in the playbook, since there are no defaults 
 * `mysql_root_password` The MySQL root password
 
 ## Standard
-* `mysql_logdir` Defaults to /data/mysql_logs
+* `mysql_logdir` Defaults to /var/log/mysql
 
 Dependencies
 ------------
@@ -34,7 +34,7 @@ Including an example of how to use this role with variables passed in as paramet
       roles:
          - { role: mysql_upgrade, mysql_major_version: "5.6", 
                 mysql_full_version: "5.6.19-1", 
-                mysql_socket: "/data/mysql_data/mysql.sock", 
+                mysql_socket: "/var/lib/mysql/mysql.sock", 
                 mysql_root_password: "changeme" }
 
 Author Information

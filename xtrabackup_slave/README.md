@@ -20,9 +20,9 @@ These variables have to be defined in the playbook, since there are no defaults 
 * `mysql_repl_password` The password of the MySQL user used by replication threads
 
 ## Standard
-* `mysql_datadir` Defaults to /data/mysql_data
-* `mysql_logdir` Defaults to /data/mysql_logs
-* `mysql_tmpdir` Defaults to /data/mysql_data/tmp
+* `mysql_datadir` Defaults to /var/lib/mysql
+* `mysql_logdir` Defaults to /var/log/mysql
+* `mysql_tmpdir` Defaults to /tmp
 
 Dependencies
 ------------
