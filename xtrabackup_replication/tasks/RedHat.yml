@@ -1,9 +1,0 @@
----
-- name: >
-    RedHat | set_fact
-      mysql_supported_os: True
-  set_fact:
-    mysql_supported_os: True
-
-- name: RedHat | install additional packages
-  yum: name=MySQL-python state=installed

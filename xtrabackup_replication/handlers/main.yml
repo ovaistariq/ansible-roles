@@ -1,5 +1,0 @@
----
-# handlers file for xtrabackup_replication
-- name: restart mysql
-  service: name={{ mysql_service_name }} state=restarted
-
