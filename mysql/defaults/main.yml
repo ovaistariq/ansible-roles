@@ -1,14 +1,13 @@
 ---
 # defaults file for mysql
-#mysql_bind_address: 127.0.0.1
 
 mysql_port: 3306
 mysql_user: "mysql"
 mysql_max_connections: 7000
 
-mysql_datadir: "/data/mysql_data"
-mysql_logdir: "/data/mysql_logs"
-mysql_tmpdir: "/data/mysql_data/tmp"
+mysql_datadir: "/var/lib/mysql"
+mysql_logdir: "/var/log/mysql"
+mysql_tmpdir: "/tmp"
 
 mysql_error_log: "{{ mysql_logdir }}/mysql-error.log"
 mysql_slow_log: "{{ mysql_logdir }}/mysql-slow.log"
@@ -18,4 +17,3 @@ mysql_expire_logs_days: 7
 
 mysql_relay_log: "{{ mysql_logdir }}/relay-bin"
 mysql_relay_log_index: "{{ mysql_logdir }}/relay-bin.index"
-

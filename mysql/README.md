@@ -23,9 +23,9 @@ These variables have to be defined in the playbook, since there are no defaults 
 * `mysql_port` Defaults to 3306
 * `mysql_user` Defaults to mysql
 * `mysql_max_connections` Defaults to 7000
-* `mysql_datadir` Defaults to /data/mysql_data
-* `mysql_logdir` Defaults to /data/mysql_logs
-* `mysql_tmpdir` Defaults to /data/mysql_data/tmp
+* `mysql_datadir` Defaults to /var/lib/mysql
+* `mysql_logdir` Defaults to /var/log/mysql
+* `mysql_tmpdir` Defaults to /tmp
 * `mysql_error_log` Defaults to {{ mysql_logdir }}/mysql-error.log
 * `mysql_slow_log` Defaults to {{ mysql_logdir }}/mysql-slow.log
 * `mysql_log_bin` Defaults to {{ mysql_logdir }}/binary_log
@@ -47,7 +47,7 @@ Including an example of how to use this role with variables passed in as paramet
       roles:
          - { role: mysql, mysql_major_version: "5.6", 
                 mysql_full_version: "5.6.19-1", 
-                mysql_socket: "/data/mysql_data/mysql.sock", 
+                mysql_socket: "/var/lib/mysql/mysql.sock", 
                 mysql_root_password: "changeme",
                 checksum_user: "some_username",
                 checksum_password: "some_password" }
