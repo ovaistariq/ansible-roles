@@ -153,7 +153,7 @@ function send_backup_to_slave() {
     local nc_pid=$(get_nc_pid $nc_port $slave_host)
     (( $(check_pid $nc_pid $slave_host ) != 0 )) && display_error_n_exit "Could not create a socket on $slave_host"
 
-    local innobackupex_args="--parallel=${backup_threads} --slave-info --stream=xbstream /tmp"
+    local innobackupex_args="--no-version-check --parallel=${backup_threads} --slave-info --stream=xbstream /tmp"
     local qpress_args="-T${compress_threads}io backup.xbstream.qp"
 
     vlog "Executing $innobackupex_bin $innobackupex_args on $master_host"
@@ -178,7 +178,7 @@ function prepare_backup_on_slave() {
 
     # Prepare the backup on the slave
     local memory_for_prepare_step=$(get_memory_available_for_backup_prepare)
-    local innobackupex_args="--apply-log --use-memory=${memory_for_prepare_step} $slave_datadir"
+    local innobackupex_args="--no-version-check --apply-log --use-memory=${memory_for_prepare_step} $slave_datadir"
 
     vlog "Executing $innobackupex_bin $innobackupex_args on $slave_host"
     ssh $slave_host "$innobackupex_bin $innobackupex_args 2> $prepare_log"
